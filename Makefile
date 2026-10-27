@@ -43,3 +43,4 @@ test: $(MATCHER_TEST_BIN) $(AUTH_TEST_BIN)
 
 clean:
 	rm -f $(BACKEND_BIN) $(MATCHER_TEST_BIN) $(AUTH_TEST_BIN) backend/matcher
+	rm -rf $(BACKEND_BIN).dSYM $(MATCHER_TEST_BIN).dSYM $(AUTH_TEST_BIN).dSYM

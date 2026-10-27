@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#102a35">
+  <meta name="theme-color" content="#283e32">
   <meta name="description" content="Your UniLost campus lost-and-found dashboard.">
   <title>Home — UniLost</title>
   <link rel="stylesheet" href="/css/site.css">
@@ -14,15 +14,22 @@
   <header id="site-header"></header>
   <main id="main" class="wrap page-main dashboard-main">
     <section class="dashboard-welcome">
-      <div>
-        <p class="eyebrow">Your campus lost and found</p>
-        <h1>Welcome to UniLost</h1>
-        <p class="lede">Report what you lost, share what you found, and check useful matches from the campus community.</p>
+      <div class="welcome-copy">
+        <p class="eyebrow">The campus lost &amp; found</p>
+        <h1>A small thing can mean a lot.</h1>
+        <p class="lede">Looking for something? Found something on campus? Start here. A few good details can help the right person find it.</p>
       </div>
       <div class="dashboard-actions">
         <a class="button primary" href="/report-item.html?type=lost">Report Lost</a>
         <a class="button secondary" href="/report-item.html?type=found">Report Found</a>
       </div>
+      <aside class="noticeboard-note" aria-label="A note about UniLost">
+        <span class="note-pin" aria-hidden="true"></span>
+        <p class="note-kicker">A note from campus</p>
+        <p class="note-copy">Be specific about the little things. A sticker, a scratch, a keychain — that’s often what gets something home.</p>
+        <span class="note-rule" aria-hidden="true"></span>
+        <span class="note-signoff">Look out for one another.</span>
+      </aside>
     </section>
 
     <section class="dashboard-summary" aria-label="Your UniLost activity">

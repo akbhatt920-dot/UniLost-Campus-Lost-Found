@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#111d2a">
+    <meta name="theme-color" content="#283e32">
     <title>Sign in — UniLost</title>
     <link rel="stylesheet" href="/css/site.css">
     <script type="module" src="/js/app.js"></script>
@@ -17,6 +17,10 @@
             <p class="eyebrow">Welcome back</p>
             <h1>Sign in to UniLost</h1>
             <p class="lede small">Use your email or verified phone number.</p>
+            <aside class="setup-notice" id="auth-setup-notice" role="alert" hidden>
+                <strong>Sign-in setup needed</strong>
+                <p id="auth-setup-detail"></p>
+            </aside>
             <form id="login-form" class="stack-form"><label class="field"><span>Email or phone number</span><input
                         name="identifier" type="text" autocomplete="username" placeholder="you@example.com or +91…"
                         required></label><label class="field"><span>Password</span><span class="password-wrap"><input

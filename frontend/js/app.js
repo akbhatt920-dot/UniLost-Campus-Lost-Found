@@ -105,22 +105,27 @@ function renderHeader(session) {
   });
   const actions = document.createElement('div'); actions.className = 'nav-actions';
   if (!session) {
+    actions.classList.add('guest-actions');
     const login = document.createElement('a'); login.className = 'button secondary small'; login.href = `/login.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}`; login.textContent = 'Log in';
     const register = document.createElement('a'); register.className = 'button primary small'; register.href = '/register.html'; register.textContent = 'Create account';
     actions.append(login, register);
   }
-  toggle.addEventListener('click', () => {
-    const open = nav.classList.toggle('open');
-    toggle.setAttribute('aria-expanded', String(open));
-    toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
-  });
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && nav.classList.contains('open')) {
-      nav.classList.remove('open'); toggle.setAttribute('aria-expanded', 'false');
-      toggle.setAttribute('aria-label', 'Open navigation'); toggle.focus();
-    }
-  });
-  header.append(brand, toggle, nav, actions);
+  if (session) {
+    toggle.addEventListener('click', () => {
+      const open = nav.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && nav.classList.contains('open')) {
+        nav.classList.remove('open'); toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', 'Open navigation'); toggle.focus();
+      }
+    });
+    header.append(brand, toggle, nav, actions);
+  } else {
+    header.append(brand, actions);
+  }
   host.append(header);
 }
 
@@ -132,7 +137,7 @@ function renderFooter() {
   const brand = document.createElement('a'); brand.className = 'brand footer-brand'; brand.href = '/index.html';
   const mark = document.createElement('span'); mark.className = 'brand-mark'; mark.textContent = 'U';
   const title = document.createElement('span'); title.textContent = 'UniLost'; brand.append(mark, title);
-  const text = document.createElement('p'); text.textContent = 'A campus community service · C-powered potential matching';
+  const text = document.createElement('p'); text.textContent = 'Lost here. Found here. Home again.';
   const top = document.createElement('a'); top.href = '#main'; top.textContent = 'Back to top ↑';
   inner.append(brand, text, top); host.replaceChildren(inner);
 }
@@ -1103,7 +1108,7 @@ async function initProfile() {
 
 async function initialize() {
   renderFooter();
-  let auth = null, session = null, authReady = false;
+  let auth = null, session = null, authReady = false, authInitFailed = false;
   try {
     auth = await initAuth(); authReady = Boolean(auth);
     if (auth) {
@@ -1116,16 +1121,23 @@ async function initialize() {
       await new Promise((resolve) => window.setTimeout(resolve, 0));
       session = await getSession();
     }
-  } catch (error) {
-    const main = byId('main');
-    const note = makeElement('p', 'form-message error', `Supabase client could not initialize: ${error.message}`);
-    main?.prepend(note);
+  } catch {
+    authInitFailed = true;
+    auth = null;
+    session = null;
+    authReady = false;
   }
   currentSession = session;
   renderHeader(session);
   if (!authReady && ['login', 'register', 'forgot', 'reset'].includes(page)) {
-    const note = makeElement('p', 'form-message error', 'Authentication is not configured. Add SUPABASE_URL and SUPABASE_ANON_KEY to .env, then restart the C server.');
-    byId('main')?.prepend(note);
+    const notice = byId('auth-setup-notice');
+    const detail = byId('auth-setup-detail');
+    if (notice && detail) {
+      detail.textContent = authInitFailed
+        ? 'UniLost could not initialize sign-in. Check the C server, Supabase settings, and network connection, then reload.'
+        : 'Add SUPABASE_URL and SUPABASE_ANON_KEY to your local .env file, then restart the C server.';
+      notice.hidden = false;
+    }
     document.querySelectorAll('form button[type=submit]').forEach((button) => { button.disabled = true; });
   }
   if (auth && session && ['login', 'register'].includes(page)) {
