@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#102a35">
+  <title>Your Profile — UniLost</title>
+  <link rel="stylesheet" href="/css/site.css">
+  <script type="module" src="/js/app.js"></script>
+</head>
+
+<body data-page="profile" data-protected="true" data-auth-required="true">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header id="site-header"></header>
+  <main id="main" class="wrap page-main narrow">
+    <section class="page-intro">
+      <p class="eyebrow">Your account</p>
+      <h1>Profile and security</h1>
+      <p class="lede">Update your display name and manage verified sign-in details through Supabase Auth.</p>
+    </section>
+    <section class="panel profile-panel">
+      <div class="section-head profile-head">
+        <div class="profile-identity">
+          <div class="profile-avatar" id="profile-avatar" aria-hidden="true">U</div>
+          <div>
+          <h2>Profile</h2>
+          <p class="field-hint">Your name is stored in your private profile. Email and phone changes go through Supabase
+            Auth and require confirmation.</p>
+          </div>
+        </div>
+        <p class="fine-print" id="account-created"></p>
+      </div>
+      <form id="profile-form" class="stack-form"><label class="field"><span>Full name</span><input name="full_name"
+            maxlength="100" autocomplete="name" required disabled></label>
+        <div class="actions"><button class="button secondary" id="profile-edit" type="button">Edit Profile</button>
+          <button class="button primary" id="profile-save" type="submit" hidden>Save Changes</button>
+          <button class="button secondary" id="profile-cancel" type="button" hidden>Cancel</button></div>
+        <p class="form-message" id="profile-message" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+    <section class="panel security-panel" id="my-lost">
+      <div class="section-head"><div><p class="eyebrow">Your listings</p><h2>My Lost Items</h2></div>
+        <div class="actions"><a class="text-link" href="/reports.html?type=lost&amp;mine=true">View all</a><a class="text-link" href="/report-item.html?type=lost">Report Lost</a></div></div>
+      <div id="profile-lost-items" class="item-grid profile-items"><p class="loading">Loading your lost reports…</p></div>
+    </section>
+    <section class="panel security-panel" id="my-found">
+      <div class="section-head"><div><p class="eyebrow">Your listings</p><h2>My Found Items</h2></div>
+        <div class="actions"><a class="text-link" href="/reports.html?type=found&amp;mine=true">View all</a><a class="text-link" href="/report-item.html?type=found">Report Found</a></div></div>
+      <div id="profile-found-items" class="item-grid profile-items"><p class="loading">Loading your found reports…</p></div>
+    </section>
+    <section class="panel security-panel">
+      <h2>Verified contact methods</h2>
+      <p class="field-hint">An unverified contact cannot be used to sign in. Request a confirmation here; UniLost never
+        edits email or phone directly in PostgreSQL.</p>
+      <div class="stack-form contact-form">
+        <label class="field"><span>Email address</span><input id="profile-email" type="email"
+            autocomplete="email"></label>
+        <button class="button secondary" id="request-email-verification" type="button">Request email
+          confirmation</button>
+        <p class="form-message" id="email-message" role="status" aria-live="polite"></p>
+        <label class="field"><span>Phone number</span><input id="profile-phone" type="tel" autocomplete="tel"
+            placeholder="+91 98765 43210"></label>
+        <button class="button secondary" id="request-phone-verification" type="button">Request phone code</button>
+        <form id="phone-change-form" class="stack-form hidden"><label class="field"><span>Phone verification
+              code</span><input name="token" inputmode="numeric" autocomplete="one-time-code" maxlength="10"
+              required></label><button class="button primary" type="submit">Verify phone</button>
+          <p class="form-message" id="phone-message" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+    <section class="panel security-panel">
+      <h2>Private handoff requests</h2>
+      <p class="field-hint">Requests about your reports are visible only to you. When someone requests a handoff, their
+        verified contact is shared with you privately.</p>
+      <h3 class="claim-list-title">Requests about your reports</h3>
+      <div id="received-claims" class="claim-list">
+        <p class="loading">Loading requests…</p>
+      </div>
+      <h3 class="claim-list-title">Requests you sent</h3>
+      <div id="sent-claims" class="claim-list">
+        <p class="loading">Loading requests…</p>
+      </div>
+    </section>
+    <section class="panel security-panel">
+      <h2>Change password</h2>
+      <form id="password-form" class="stack-form">
+        <label class="field"><span>Current password</span><input name="current_password" type="password"
+            autocomplete="current-password" required></label>
+        <label class="field"><span>New password</span><input name="password" type="password" autocomplete="new-password"
+            minlength="10" required></label>
+        <label class="field"><span>Confirm new password</span><input name="confirm_password" type="password"
+            autocomplete="new-password" minlength="10" required></label>
+        <button class="button secondary" type="submit">Update password</button>
+        <p class="form-message" id="password-message" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+    <section class="panel danger-panel">
+      <div>
+        <h2>Sign out</h2>
+        <p>Sign out of this UniLost session on this browser.</p>
+      </div><button class="button secondary" id="profile-logout" type="button">Sign Out</button>
+    </section>
+  </main>
+  <footer id="site-footer"></footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+
+</html>

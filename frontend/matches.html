@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#102a35">
+    <meta name="description" content="Compare your open lost reports with found reports using UniLost's C matching algorithm.">
+    <title>Matches — UniLost</title>
+    <link rel="stylesheet" href="/css/site.css">
+    <script type="module" src="/js/app.js"></script>
+</head>
+
+<body data-page="matches" data-auth-required="true"><a class="skip-link" href="#main">Skip to content</a>
+    <header id="site-header"></header>
+    <main id="main" class="wrap page-main">
+        <section class="page-intro">
+            <p class="eyebrow">C matching algorithm</p>
+            <h1>Matches</h1>
+            <p class="lede">Choose one of your open lost reports. UniLost compares it with open found reports and ranks
+                the results.</p>
+        </section>
+        <section class="panel match-picker"><label class="field"><span>Your open lost report</span><select
+                    id="lost-report-select">
+                    <option value="">Loading your reports…</option>
+                </select></label><button class="button primary" id="find-matches" type="button">Find matches <span
+                    aria-hidden="true">→</span></button></section>
+        <p id="match-status" class="browse-status" role="status">Choose a report to compare it against public found-item
+            reports.</p>
+        <section id="match-results" class="match-results" aria-live="polite"></section>
+        <div class="score-key"><span><i class="score-dot strong"></i>70–100 Strong potential match</span><span><i
+                    class="score-dot possible"></i>40–69 Possible match</span></div>
+        <p class="fine-print">A high score is only a clue, not proof of ownership. Verify a distinctive detail and use a
+            safe campus handoff.</p>
+    </main>
+    <footer id="site-footer"></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+
+</html>

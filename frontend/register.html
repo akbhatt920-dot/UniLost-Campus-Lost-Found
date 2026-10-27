@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111d2a">
+    <title>Create account — UniLost</title>
+    <link rel="stylesheet" href="/css/site.css">
+    <script type="module" src="/js/app.js"></script>
+</head>
+
+<body data-page="register"><a class="skip-link" href="#main">Skip to content</a>
+    <header id="site-header"></header>
+    <main id="main" class="auth-shell">
+        <section class="auth-card wide">
+            <p class="eyebrow">Join your campus community</p>
+            <h1>Create your account</h1>
+            <p class="lede small">Choose which verified identifier you’ll use to sign in. You can add the other one from
+                your profile after verification.</p>
+            <form id="register-form" class="stack-form"><label class="field"><span>Full name</span><input
+                        name="full_name" autocomplete="name" maxlength="100" required></label>
+                <div class="form-grid-two"><label class="field"><span>Email address</span><input name="email"
+                            type="email" autocomplete="email" required></label><label class="field"><span>Phone
+                            number</span><input name="phone" type="tel" autocomplete="tel" placeholder="+91 98765 43210"
+                            required></label></div>
+                <fieldset class="choice-field">
+                    <legend>Sign in with</legend><label><input type="radio" name="login_method" value="email" checked>
+                        Email and password</label><label><input type="radio" name="login_method" value="phone"> Phone
+                        and password</label>
+                </fieldset>
+                <p class="field-hint">Phone numbers must include the country code, such as +91. Supabase verifies the
+                    selected sign-in method. Your other contact is saved as unverified until you confirm it in Profile.
+                </p>
+                <div class="form-grid-two"><label class="field"><span>Password</span><input name="password"
+                            type="password" autocomplete="new-password" minlength="10" required></label><label
+                        class="field"><span>Confirm password</span><input name="confirm_password" type="password"
+                            autocomplete="new-password" minlength="10" required></label></div><label
+                    class="check-field"><input name="terms" type="checkbox" required><span>I understand UniLost stores
+                        report contact details privately and shows item details only to signed-in users.</span></label><button
+                    class="button primary full" type="submit">Create account <span aria-hidden="true">→</span></button>
+                <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+            </form>
+            <form id="signup-verify-form" class="stack-form panel hidden">
+                <p class="eyebrow">Verify phone</p><label class="field"><span>SMS verification code</span><input
+                        name="token" inputmode="numeric" autocomplete="one-time-code" maxlength="10"
+                        required></label><button class="button secondary full" type="submit">Verify phone</button>
+                <p class="form-message" id="signup-verify-message" role="status" aria-live="polite"></p>
+            </form>
+            <p class="auth-switch">Already registered? <a href="/login.html">Sign in</a></p>
+        </section>
+    </main>
+    <footer id="site-footer"></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+
+</html>

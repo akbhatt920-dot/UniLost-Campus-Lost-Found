@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102a35">
+  <meta name="description" content="Your UniLost campus lost-and-found dashboard.">
+  <title>Home — UniLost</title>
+  <link rel="stylesheet" href="/css/site.css">
+  <script type="module" src="/js/app.js"></script>
+</head>
+<body data-page="home" data-auth-required="true">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header id="site-header"></header>
+  <main id="main" class="wrap page-main dashboard-main">
+    <section class="dashboard-welcome">
+      <div>
+        <p class="eyebrow">Your campus lost and found</p>
+        <h1>Welcome to UniLost</h1>
+        <p class="lede">Report what you lost, share what you found, and check useful matches from the campus community.</p>
+      </div>
+      <div class="dashboard-actions">
+        <a class="button primary" href="/report-item.html?type=lost">Report Lost</a>
+        <a class="button secondary" href="/report-item.html?type=found">Report Found</a>
+      </div>
+    </section>
+
+    <section class="dashboard-summary" aria-label="Your UniLost activity">
+      <article class="summary-tile"><span class="summary-label">Your lost reports</span><strong id="my-lost-count">—</strong><a href="/profile.html#my-lost">View your reports</a></article>
+      <article class="summary-tile"><span class="summary-label">Your found reports</span><strong id="my-found-count">—</strong><a href="/profile.html#my-found">View your reports</a></article>
+      <article class="summary-tile"><span class="summary-label">Matches for your reports</span><strong id="my-match-count">—</strong><a href="/matches.html">Open Matches</a></article>
+    </section>
+    <div class="dashboard-feedback">
+      <p id="connection-state" class="connection" role="status">Checking the service…</p>
+      <p id="dashboard-status" class="form-message" role="status" aria-live="polite">Loading your dashboard…</p>
+      <button class="button secondary small" id="dashboard-retry" type="button">Refresh dashboard</button>
+    </div>
+
+    <section class="dashboard-section">
+      <div class="section-heading-row">
+        <div><p class="eyebrow">Campus noticeboard</p><h2>Recently found</h2></div>
+        <a class="text-link" href="/reports.html?type=found">Browse Found Items</a>
+      </div>
+      <div id="recent-campus-found" class="item-grid compact">
+        <p class="loading">Loading found items…</p>
+      </div>
+    </section>
+
+    <section class="dashboard-section">
+      <div class="section-heading-row">
+        <div><p class="eyebrow">Your activity</p><h2>Your recent reports</h2></div>
+        <a class="text-link" href="/profile.html">Manage reports in Profile</a>
+      </div>
+      <div class="dashboard-columns">
+        <div><h3>Lost</h3><div id="my-recent-lost" class="item-grid compact"><p class="loading">Loading your lost reports…</p></div></div>
+        <div><h3>Found</h3><div id="my-recent-found" class="item-grid compact"><p class="loading">Loading your found reports…</p></div></div>
+      </div>
+    </section>
+    <p class="fine-print dashboard-note">Match scores are clues for follow-up, not proof of ownership. Confirm a distinctive detail and arrange a safe handoff.</p>
+  </main>
+  <footer id="site-footer"></footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111d2a">
+    <title>Sign in — UniLost</title>
+    <link rel="stylesheet" href="/css/site.css">
+    <script type="module" src="/js/app.js"></script>
+</head>
+
+<body data-page="login"><a class="skip-link" href="#main">Skip to content</a>
+    <header id="site-header"></header>
+    <main id="main" class="auth-shell">
+        <section class="auth-card">
+            <p class="eyebrow">Welcome back</p>
+            <h1>Sign in to UniLost</h1>
+            <p class="lede small">Use your email or verified phone number.</p>
+            <form id="login-form" class="stack-form"><label class="field"><span>Email or phone number</span><input
+                        name="identifier" type="text" autocomplete="username" placeholder="you@example.com or +91…"
+                        required></label><label class="field"><span>Password</span><span class="password-wrap"><input
+                            name="password" type="password" autocomplete="current-password" required><button
+                            type="button" class="password-toggle"
+                            aria-label="Show password">Show</button></span></label>
+                <div class="form-row"><a href="/forgot-password.html">Forgot password?</a></div><button
+                    class="button primary full" type="submit">Sign in <span aria-hidden="true">→</span></button>
+                <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+            </form>
+            <p class="auth-switch">New to UniLost? <a href="/register.html">Create an account</a></p>
+            <p class="fine-print">Phone sign-in requires the account’s phone number to be verified and phone
+                authentication to be enabled in Supabase.</p>
+        </section>
+    </main>
+    <footer id="site-footer"></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+
+</html>

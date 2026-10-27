@@ -1,0 +1,19 @@
+# Local credentials and environment-specific settings
+.env
+.env.*
+!.env.example
+
+# macOS metadata and debug symbols
+.DS_Store
+*.dSYM/
+
+# Local build outputs
+backend/unilost_server
+backend/matcher
+backend/matcher_test
+backend/auth_key_test
+*.o
+*.a
+*.dylib
+*.so
+*.log

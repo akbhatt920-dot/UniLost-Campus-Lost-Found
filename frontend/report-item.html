@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102a35">
+  <meta name="description" content="Create a private lost or found item report for your campus community.">
+  <title>Report an Item — UniLost</title>
+  <link rel="stylesheet" href="/css/site.css"><script type="module" src="/js/app.js"></script>
+</head>
+<body data-page="report" data-type="all" data-auth-required="true">
+  <a class="skip-link" href="#main">Skip to content</a><header id="site-header"></header>
+  <main id="main" class="wrap page-main narrow">
+    <section class="page-intro"><p class="eyebrow" id="report-eyebrow">Create a report</p>
+      <h1 id="report-title">Tell us about the item.</h1>
+      <p class="lede" id="report-intro">Add clear details so your campus community can help.</p>
+    </section>
+    <form id="report-form" class="panel stack-form">
+      <fieldset class="report-type-choice" id="report-type-choice"><legend>What are you reporting?</legend>
+        <label><input type="radio" name="report_type" value="lost" checked> I lost something</label>
+        <label><input type="radio" name="report_type" value="found"> I found something</label>
+      </fieldset>
+      <div class="form-grid-two">
+        <label class="field"><span>Item name</span><input name="item_name" maxlength="120" required placeholder="e.g. Black leather wallet"></label>
+        <label class="field"><span>Category</span><select name="category" required>
+          <option value="">Choose a category</option><option>ID Card</option><option>Wallet</option><option>Electronics</option>
+          <option>Bottle</option><option>Keys</option><option>Bag</option><option>Stationery</option><option>Clothing</option><option>Other</option>
+        </select></label>
+        <label class="field"><span id="report-date-label">Date lost</span><input name="item_date" type="date" required></label>
+        <label class="field"><span id="report-location-label">Where did you last see it?</span><input name="location" maxlength="120" required placeholder="Central Library, second floor"></label>
+        <label class="field full-span"><span>Description</span><textarea name="description" maxlength="400" rows="4" required placeholder="Color, brand, marks, or anything distinctive"></textarea></label>
+        <label class="field full-span" id="photo-field"><span>Photo (optional)</span><input name="photo" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="photo-hint"><small id="photo-hint">JPEG, PNG, or WebP up to 5 MB. Visible to signed-in members. Avoid faces, IDs, and other private details.</small></label>
+        <div class="photo-preview full-span" id="photo-preview" hidden><img id="photo-preview-image" alt="Selected item photo preview"><button class="item-action" id="photo-clear" type="button">Remove photo</button></div>
+        <label class="field"><span>Your name</span><input name="contact_name" maxlength="100" autocomplete="name" required></label>
+        <label class="field"><span>Email or phone for follow-up</span><input name="contact_info" maxlength="180" autocomplete="email" required></label>
+      </div>
+      <p class="field-hint">Your contact details stay private. They are shared with a report owner only after you send a handoff request.</p>
+      <button class="button primary" id="submit-report" type="submit">Submit lost-item report →</button>
+      <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+      <div class="report-success" id="report-success" hidden>
+        <h2>Report saved</h2>
+        <p>Your item is now in UniLost. Choose what you’d like to do next.</p>
+        <div class="actions">
+          <button class="button secondary" id="report-view-item" type="button">View report</button>
+          <a class="button primary" id="report-find-matches" href="/matches.html">Find matches</a>
+          <a class="button secondary" href="/reports.html?type=found">Browse Found Items</a>
+        </div>
+      </div>
+    </form>
+  </main>
+  <footer id="site-footer"></footer><div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
