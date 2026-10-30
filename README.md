@@ -107,13 +107,13 @@ Email recovery uses `resetPasswordForEmail()` and displays a neutral response to
 
 ### 5. Create local configuration
 
-Copy the example file and edit it locally:
+Create a file named `.env` in the project root and add your local values:
 
 ```sh
-cp .env.example .env
+DATABASE_URL='YOUR_POSTGRES_CONNECTION_STRING?sslmode=require'
+SUPABASE_URL='https://YOUR_PROJECT_REF.supabase.co'
+SUPABASE_ANON_KEY='YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY'
 ```
-
-Fill these values in `.env`:
 
 - `DATABASE_URL`: PostgreSQL connection string for the dedicated `unilost_backend` login, with TLS (`sslmode=require`). Use the Supabase direct connection if your network supports it, or session pooler on IPv4-only networks. Percent-encode reserved characters in the password.
 - `SUPABASE_URL`: project URL from Supabase API settings, such as `https://your-project-ref.supabase.co`.
