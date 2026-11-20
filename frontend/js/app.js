@@ -58,7 +58,7 @@ function renderHeader(session) {
     ['/index.html', 'Home', 'home', 'home'],
     ['/report-item.html?type=lost', 'Report Lost', 'report-lost', 'lost'],
     ['/report-item.html?type=found', 'Report Found', 'report-found', 'found'],
-    ['/matches.html', 'Matches', 'matches', 'matches'],
+    ['/chat.html', 'Chats', 'chats', 'chats'],
     ['/reports.html?type=found', 'Browse Found Items', 'items', 'browse'],
     ['/profile.html', 'Profile', 'profile', 'profile']
   ] : [];
@@ -78,14 +78,14 @@ function renderHeader(session) {
   toggle.setAttribute('aria-controls', nav.id);
   const active = session ? page === 'home' ? 'home'
     : page === 'report' ? (requestedType === 'found' ? 'report-found' : 'report-lost')
-      : page === 'matches' ? 'matches'
+      : page === 'chats' ? 'chats'
         : page === 'items' ? 'browse'
           : page === 'profile' ? 'profile' : '' : '';
   const icons = {
     home: ['M3 10.5 12 3l9 7.5', 'M5.5 9.5v11h13v-11', 'M9 20.5v-7h6v7'],
     lost: ['M10.5 18.5a8 8 0 1 1 5.7-2.4', 'm16.5 16.5 4 4', 'M8 10.5h5'],
     found: ['M4 7.5h16v13H4z', 'M4 11h16', 'M12 11v9.5', 'M12 3v5', 'M9.5 5.5h5'],
-    matches: ['M8.5 15.5 6 18a4 4 0 0 1-5.5-5.8l4-4a4 4 0 0 1 5.7 0', 'm15.5 8.5 2.5-2.5a4 4 0 0 1 5.5 5.8l-4 4a4 4 0 0 1-5.7 0', 'M8 12h8'],
+    chats: ['M21 15a3 3 0 0 1-3 3H8l-5 3V6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3z', 'M8 9h8', 'M8 13h5'],
     browse: ['M3 5.5h11v14H3z', 'M6 9h5', 'M6 12h4', 'M17 15.5l4 4', 'M16 11.5a4 4 0 1 0 0 .1'],
     profile: ['M20 21a8 8 0 0 0-16 0', 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z']
   };
@@ -142,7 +142,32 @@ function renderFooter() {
   inner.append(brand, text, top); host.replaceChildren(inner);
 }
 
-async function logoutUser() {
+function ensureLogoutDialog() {
+  let dialog = byId('logout-dialog');
+  if (dialog) return dialog;
+  dialog = makeElement('dialog', 'logout-dialog'); dialog.id = 'logout-dialog';
+  dialog.setAttribute('aria-labelledby', 'logout-dialog-title');
+  const content = makeElement('div', 'logout-dialog-content');
+  content.append(makeElement('div', 'logout-dialog-icon', '→'));
+  const title = makeElement('h2', '', 'Sign out of UniLost?'); title.id = 'logout-dialog-title';
+  content.append(title, makeElement('p', 'field-hint', 'Your private chats and account session will remain protected on this browser.'));
+  const actions = makeElement('div', 'logout-dialog-actions');
+  const cancel = makeElement('button', 'button secondary', 'Stay signed in'); cancel.type = 'button';
+  const confirm = makeElement('button', 'button danger', 'Yes, sign out'); confirm.type = 'button';
+  cancel.addEventListener('click', () => dialog.close());
+  confirm.addEventListener('click', () => {
+    dialog.close();
+    void logoutUser(true);
+  });
+  actions.append(cancel, confirm); content.append(actions); dialog.append(content); document.body.append(dialog);
+  return dialog;
+}
+
+async function logoutUser(confirmed = false) {
+  if (!confirmed) {
+    ensureLogoutDialog().showModal();
+    return;
+  }
   const auth = getAuthClient();
   if (!auth) return;
   const { error } = await auth.auth.signOut();
@@ -283,9 +308,9 @@ async function openItemDetails(itemId) {
     content.append(badges, heading, makeElement('p', 'details-description', item.description), meta);
     const actions = makeElement('div', 'details-actions');
     if (item.is_owner && item.report_type === 'lost' && item.status === 'open') {
-      const matches = makeElement('a', 'button primary', 'Find matches');
-      matches.href = `/matches.html?lost_id=${encodeURIComponent(item.id)}`;
-      actions.append(matches);
+      const chats = makeElement('a', 'button primary', 'Open handoff chats');
+      chats.href = '/chat.html';
+      actions.append(chats);
     } else if (item.is_owner && item.status === 'open') {
       actions.append(makeElement('p', 'field-hint', 'This is your report. You can update its status from your Profile.'));
     } else if (item.claimable && item.status === 'open') {
@@ -407,12 +432,10 @@ async function loadHome() {
   if (summary.status === 'fulfilled') {
     byId('my-lost-count').textContent = String(summary.value.my_lost);
     byId('my-found-count').textContent = String(summary.value.my_found);
-    byId('my-match-count').textContent = String(summary.value.my_matches);
     showMessage(byId('dashboard-status'), 'Your account totals are up to date.');
   } else {
     byId('my-lost-count').textContent = '—';
     byId('my-found-count').textContent = '—';
-    byId('my-match-count').textContent = '—';
     showMessage(byId('dashboard-status'), summary.reason.message, true);
   }
   for (const [id, result, label, emptyText] of [
@@ -577,7 +600,7 @@ function ensureClaimDialog() {
   const itemId = document.createElement('input'); itemId.type = 'hidden'; itemId.name = 'item_id'; form.append(itemId);
   const label = makeElement('label', 'field'); label.append(makeElement('span', '', 'Message to the owner'));
   const textarea = document.createElement('textarea'); textarea.name = 'message'; textarea.rows = 4;
-  textarea.maxLength = 500; textarea.required = true; textarea.placeholder = 'Share a detail that helps identify the item.';
+  textarea.required = true; textarea.placeholder = 'Share details that help identify the item.';
   label.append(textarea); form.append(label);
   const submit = makeElement('button', 'button primary', 'Send private request'); submit.type = 'submit';
   form.append(submit, makeElement('p', 'form-message', ''));
@@ -709,9 +732,10 @@ function initReport() {
       showMessage(message, `${result.message} Your report is now open.`);
       const success = byId('report-success');
       success.hidden = false;
-      const findMatches = byId('report-find-matches');
-      findMatches.hidden = submittedType !== 'lost';
-      findMatches.href = `/matches.html?lost_id=${encodeURIComponent(result.id)}`;
+      const openChats = byId('report-find-matches');
+      openChats.hidden = submittedType !== 'lost';
+      openChats.textContent = 'Open handoff chats';
+      openChats.href = '/chat.html';
       byId('report-view-item').onclick = () => openItemDetails(result.id);
       form.reset();
       if (fixedType) typeChoices.forEach((choice) => { choice.checked = choice.value === fixedType; });
@@ -929,6 +953,26 @@ function initReset(auth, session) {
   });
 }
 
+async function loadClaimChat(claim, chatList, chatForm) {
+  try {
+    const data = await apiRequest(`/api/claims/${encodeURIComponent(claim.id)}/messages`, { auth: 'required' });
+    chatList.replaceChildren();
+    if (!data.messages.length) {
+      chatList.append(makeElement('p', 'claim-chat-empty', 'No chat messages yet.'));
+    } else {
+      data.messages.forEach((message) => {
+        const bubble = makeElement('div', `claim-chat-message ${message.is_own ? 'own' : 'other'}`);
+        bubble.append(makeElement('p', '', message.message));
+        bubble.append(makeElement('time', '', formatDate(message.created_at)));
+        chatList.append(bubble);
+      });
+    }
+  } catch (error) {
+    chatList.replaceChildren(makeElement('p', 'claim-chat-empty', error.message));
+  }
+  chatList.scrollTop = chatList.scrollHeight;
+}
+
 function renderClaimList(container, claims, received) {
   container.replaceChildren();
   if (!claims.length) {
@@ -945,6 +989,33 @@ function renderClaimList(container, claims, received) {
     if (received && claim.requester_contact) {
       card.append(makeElement('p', 'claim-contact', `Verified requester contact: ${claim.requester_contact}`));
     }
+    const chat = makeElement('div', 'claim-chat');
+    chat.append(makeElement('h5', '', 'Private chat'));
+    const chatList = makeElement('div', 'claim-chat-list');
+    chat.append(chatList);
+    const chatForm = makeElement('form', 'claim-chat-form');
+    const input = document.createElement('textarea');
+    input.name = 'message'; input.rows = 2; input.required = true;
+    input.placeholder = 'Reply privately…';
+    const send = makeElement('button', 'button secondary', 'Send reply'); send.type = 'submit';
+    chatForm.append(input, send);
+    chatForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      send.disabled = true;
+      try {
+        await apiRequest(`/api/claims/${encodeURIComponent(claim.id)}/messages`, {
+          method: 'POST', auth: 'required', body: JSON.stringify({ message: text })
+        });
+        input.value = '';
+        await loadClaimChat(claim, chatList, chatForm);
+      } catch (error) { toast(error.message); }
+      finally { send.disabled = false; }
+    });
+    chat.append(chatForm);
+    card.append(chat);
+    void loadClaimChat(claim, chatList, chatForm);
     if (received && claim.status === 'pending') {
       const actions = makeElement('div', 'claim-actions');
       for (const [status, label, className] of [['accepted', 'Accept request', 'accept'], ['declined', 'Decline', 'decline']]) {
@@ -981,6 +1052,123 @@ async function loadClaimInbox() {
   }
 }
 
+async function initChats() {
+  const status = byId('chat-status');
+  const conversationList = byId('chat-conversations');
+  const messageList = byId('chat-messages');
+  const compose = byId('chat-compose');
+  const input = byId('chat-input');
+  let activeClaim = null;
+
+  async function openThread(claim) {
+    activeClaim = claim;
+    byId('chat-thread-title').textContent = claim.conversation_name || claim.item_name || 'Handoff chat';
+    byId('chat-avatar').textContent = String(claim.conversation_name || claim.item_name || 'U').trim().charAt(0).toUpperCase();
+    byId('chat-thread-meta').textContent = `${claim.report_type === 'lost' ? 'Lost' : 'Found'} report · ${claim.status}`;
+    byId('chat-avatar').textContent = String(claim.item_name || 'U').trim().charAt(0).toUpperCase();
+    input.disabled = false; compose.querySelector('button').disabled = false;
+    const voice = byId('voice-call'); const video = byId('video-call');
+    voice.disabled = false; video.disabled = false;
+    document.querySelectorAll('.chat-conversation').forEach((item) => {
+      item.classList.toggle('active', item.dataset.claimId === claim.id);
+    });
+    await loadChatThread(claim.id);
+  }
+
+  async function loadChatThread(claimId) {
+    try {
+      const data = await apiRequest(`/api/claims/${encodeURIComponent(claimId)}/messages`, { auth: 'required' });
+      messageList.replaceChildren();
+      if (!data.messages.length) {
+        if (activeClaim?.message) {
+          const row = makeElement('div', 'chat-bubble-row other');
+          const bubble = makeElement('div', 'chat-bubble');
+          bubble.append(makeElement('p', '', activeClaim.message));
+          bubble.append(makeElement('time', '', formatDate(activeClaim.created_at)));
+          row.append(bubble); messageList.append(row);
+        } else {
+          messageList.append(makeElement('div', 'chat-empty-thread', 'No messages yet. Start the conversation.'));
+        }
+      } else {
+        data.messages.forEach((message) => {
+          const row = makeElement('div', `chat-bubble-row ${message.is_own ? 'own' : 'other'}`);
+          const bubble = makeElement('div', 'chat-bubble');
+          bubble.append(makeElement('p', '', message.message));
+          bubble.append(makeElement('time', '', formatDate(message.created_at)));
+          row.append(bubble); messageList.append(row);
+        });
+      }
+      messageList.scrollTop = messageList.scrollHeight;
+    } catch (error) {
+      messageList.replaceChildren(makeElement('div', 'chat-empty-thread', error.message));
+    }
+  }
+
+  compose.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!activeClaim) return;
+    const text = input.value.trim();
+    if (!text) return;
+    const send = compose.querySelector('button'); send.disabled = true;
+    try {
+      await apiRequest(`/api/claims/${encodeURIComponent(activeClaim.id)}/messages`, {
+        method: 'POST', auth: 'required', body: JSON.stringify({ message: text })
+      });
+      input.value = ''; await loadChatThread(activeClaim.id);
+    } catch (error) { toast(error.message); }
+    finally { send.disabled = false; }
+  });
+
+  byId('voice-call')?.addEventListener('click', () => {
+    const contact = activeClaim?.requester_contact || '';
+    if (!/^\+?[1-9]\d{7,14}$/.test(String(contact).replace(/[^+\d]/g, ''))) {
+      toast('The phone number is private and is unavailable for this conversation.'); return;
+    }
+    window.location.href = `tel:${String(contact).replace(/[^+\d]/g, '')}`;
+  });
+  byId('video-call')?.addEventListener('click', () => {
+    const contact = activeClaim?.requester_contact || '';
+    if (!/^\+?[1-9]\d{7,14}$/.test(String(contact).replace(/[^+\d]/g, ''))) {
+      toast('Video calling is unavailable until the report owner has a verified contact for this conversation.'); return;
+    }
+    window.location.href = `facetime://${String(contact).replace(/[^+\d]/g, '')}`;
+  });
+
+  try {
+    const [received, sent] = await Promise.all([
+      apiRequest('/api/claims?scope=received', { auth: 'required' }),
+      apiRequest('/api/claims?scope=sent', { auth: 'required' })
+    ]);
+    const claims = [...received.claims.map((claim) => ({ ...claim, conversationSide: 'received' })),
+      ...sent.claims.map((claim) => ({ ...claim, conversationSide: 'sent' }))]
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    byId('chat-count').textContent = String(claims.length);
+    if (status) status.textContent = claims.length
+      ? `${claims.length} conversation${claims.length === 1 ? '' : 's'}`
+      : 'No conversations yet';
+    conversationList.replaceChildren();
+    if (!claims.length) {
+      conversationList.append(makeElement('p', 'chat-list-empty', 'No handoff conversations yet. Send a private handoff request from a found item.'));
+      return;
+    }
+    claims.forEach((claim) => {
+      const item = makeElement('button', 'chat-conversation');
+      item.type = 'button'; item.dataset.claimId = claim.id;
+      const avatar = makeElement('div', 'chat-conversation-avatar', String(claim.conversation_name || claim.item_name || 'U').trim().charAt(0).toUpperCase());
+      const copy = makeElement('div', 'chat-conversation-copy');
+      copy.append(makeElement('strong', '', claim.conversation_name || claim.item_name || 'Handoff item'));
+      copy.append(makeElement('span', '', `${claim.status} · ${formatDate(claim.created_at)}`));
+      item.append(avatar, copy); item.append(makeElement('span', `chat-status-dot ${claim.status}`, ''));
+      item.addEventListener('click', () => openThread(claim));
+      conversationList.append(item);
+    });
+    await openThread(claims[0]);
+  } catch (error) {
+    if (status) status.textContent = error.message;
+    conversationList.replaceChildren(makeElement('p', 'chat-list-empty', error.message));
+  }
+}
+
 async function initProfile() {
   const profileForm = byId('profile-form');
   if (!profileForm) return;
@@ -1007,7 +1195,6 @@ async function initProfile() {
   } catch (error) {
     showMessage(byId('profile-message'), error.message, true);
   }
-  await loadClaimInbox();
   await loadMyItems();
 
   const nameInput = profileForm.elements.full_name;
@@ -1089,21 +1276,48 @@ async function initProfile() {
     pendingPhoneNumber = '';
   });
 
+  document.querySelectorAll('.password-toggle').forEach((button) => {
+    button.addEventListener('click', () => {
+      const input = button.parentElement.querySelector('input');
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      button.textContent = show ? 'Hide' : 'Show';
+      button.setAttribute('aria-label', `${show ? 'Hide' : 'Show'} password`);
+    });
+  });
   byId('password-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
     const message = byId('password-message');
+    const oldPassword = form.elements.current_password.value;
+    const confirmedOldPassword = form.elements.confirm_current_password.value;
     const password = form.elements.password.value;
-    if (password.length < 10 || password !== form.elements.confirm_password.value) {
-      showMessage(message, password.length < 10 ? 'Use at least 10 characters.' : 'The passwords do not match.', true); return;
+    if (oldPassword !== confirmedOldPassword) {
+      showMessage(message, 'The two old password entries do not match.', true); return;
     }
-    const { error } = await auth.auth.updateUser({
-      password, current_password: form.elements.current_password.value
-    });
+    if (password.length < 10) {
+      showMessage(message, 'Use at least 10 characters for the new password.', true); return;
+    }
+    if (password !== form.elements.confirm_password.value) {
+      showMessage(message, 'The new password entries do not match.', true); return;
+    }
+    const session = await getSession();
+    const identity = session?.user?.email || session?.user?.phone;
+    if (!identity) {
+      showMessage(message, 'A verified email or phone is required to change your password.', true); return;
+    }
+    const loginParams = session.user.email
+      ? { email: session.user.email, password: oldPassword }
+      : { phone: session.user.phone, password: oldPassword };
+    const reauth = await auth.auth.signInWithPassword(loginParams);
+    if (reauth.error) {
+      showMessage(message, 'The old password is incorrect.', true); return;
+    }
+    const { error } = await auth.auth.updateUser({ password });
     if (error) showMessage(message, error.message, true);
     else { form.reset(); showMessage(message, 'Password updated through Supabase Auth.'); }
   });
-  byId('profile-logout')?.addEventListener('click', logoutUser);
+  byId('profile-logout')?.addEventListener('click', () => logoutUser(false));
 }
 
 async function initialize() {
@@ -1157,7 +1371,7 @@ async function initialize() {
   }
   if (page === 'items') initBrowse();
   if (page === 'report') initReport();
-  if (page === 'matches') { ensureItemDetailsDialog(); await initMatches(); }
+  if (page === 'chats') await initChats();
   if (page === 'login' && auth) initLogin(auth);
   if (page === 'register' && auth) initRegister(auth);
   if (page === 'forgot' && auth) initForgot(auth);

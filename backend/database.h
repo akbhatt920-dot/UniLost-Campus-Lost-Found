@@ -22,7 +22,7 @@ struct DashboardSummary {
 };
 
 #define UNILOST_CLAIM_ID_LEN 64
-#define UNILOST_CLAIM_MESSAGE_LEN 501
+#define UNILOST_CLAIM_MESSAGE_LEN 16385
 #define UNILOST_CLAIM_CONTACT_LEN 257
 struct Claim {
     char id[UNILOST_CLAIM_ID_LEN];
@@ -32,7 +32,15 @@ struct Claim {
     char category[UNILOST_CATEGORY_LEN];
     char message[UNILOST_CLAIM_MESSAGE_LEN];
     char requester_contact[UNILOST_CLAIM_CONTACT_LEN];
+    char conversation_name[UNILOST_PROFILE_NAME_LEN];
     char status[UNILOST_STATUS_LEN];
+    char created_at[UNILOST_CREATED_LEN];
+};
+
+struct ClaimMessage {
+    char id[UNILOST_CLAIM_ID_LEN];
+    char sender_id[UNILOST_CLAIM_ID_LEN];
+    char message[UNILOST_CLAIM_MESSAGE_LEN];
     char created_at[UNILOST_CREATED_LEN];
 };
 
@@ -91,5 +99,12 @@ int database_list_claims(struct Database *database, const char *user_id,
                          size_t *count);
 int database_update_claim(struct Database *database, const char *claim_id,
                           const char *owner_id, const char *status);
+int database_list_claim_messages(struct Database *database,
+                                 const char *claim_id, const char *user_id,
+                                 struct ClaimMessage messages[],
+                                 size_t capacity, size_t *count);
+int database_create_claim_message(struct Database *database,
+                                  const char *claim_id, const char *user_id,
+                                  const char *message);
 
 #endif

@@ -28,7 +28,24 @@ $(BACKEND_BIN): backend/server.c backend/database.c backend/database.h \
 		-o $(BACKEND_BIN)
 
 run: build
-	@set -a; if [ -f .env ]; then . ./.env; fi; set +a; exec ./$(BACKEND_BIN)
+	@pids="$$(lsof -tiTCP:8000 -sTCP:LISTEN 2>/dev/null)"; \
+	if [ -n "$$pids" ]; then \
+		for pid in $$pids; do \
+			command="$$(ps -p "$$pid" -o command= 2>/dev/null)"; \
+			if printf '%s' "$$command" | grep -q 'backend/unilost_server\|./unilost_server'; then \
+				kill "$$pid" 2>/dev/null || true; \
+			else \
+				echo "Port 8000 is in use by another process (PID $$pid)."; \
+				echo "Stop it first, then run 'make run' again."; \
+				exit 1; \
+			fi; \
+		done; \
+		for attempt in 1 2 3 4 5 6 7 8 9 10; do \
+			if [ -z "$$(lsof -tiTCP:8000 -sTCP:LISTEN 2>/dev/null)" ]; then break; fi; \
+			sleep 0.1; \
+		done; \
+	fi; \
+	set -a; if [ -f .env ]; then . ./.env; fi; set +a; exec ./$(BACKEND_BIN)
 
 $(MATCHER_TEST_BIN): tests/matcher_test.c backend/matcher.c backend/matcher.h
 	$(CC) $(CFLAGS) -Ibackend tests/matcher_test.c backend/matcher.c -o $(MATCHER_TEST_BIN)

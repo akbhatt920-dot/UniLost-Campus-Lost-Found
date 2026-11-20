@@ -509,9 +509,9 @@ static void handle_create_claim(struct mg_connection *connection,
     }
     if (request->body.len > MAX_REQUEST_BODY || !is_json_object(request->body) ||
         !read_required_string(request->body, "$.message", message,
-                              sizeof(message)) || strlen(message) > 500) {
+                              sizeof(message))) {
         send_error(connection, 400, "invalid_claim",
-                   "Write a short message up to 500 characters.");
+                   "Write a message to the report owner.");
         return;
     }
     if (user.email_confirmed && user.email[0] != '\0') {
@@ -550,7 +550,8 @@ static void append_claim_json(struct mg_iobuf *output, const struct Claim *claim
     if (include_contact)
         append_json(output, ",\"requester_contact\":%m",
                     MG_ESC(claim->requester_contact));
-    append_json(output, "}");
+    append_json(output, ",\"conversation_name\":%m}",
+                MG_ESC(claim->conversation_name));
 }
 
 static void handle_list_claims(struct mg_connection *connection,
@@ -592,10 +593,17 @@ static void handle_list_claims(struct mg_connection *connection,
 
 static int extract_claim_id(struct mg_str uri, char id[UNILOST_CLAIM_ID_LEN]) {
     static const char prefix[] = "/api/claims/";
-    size_t prefix_length = sizeof(prefix) - 1, length, i;
+    static const char suffix[] = "/messages";
+    size_t prefix_length = sizeof(prefix) - 1;
+    size_t suffix_length = sizeof(suffix) - 1;
+    size_t length, i;
     if (uri.len <= prefix_length || memcmp(uri.buf, prefix, prefix_length) != 0)
         return 0;
     length = uri.len - prefix_length;
+    if (length >= suffix_length &&
+        memcmp(uri.buf + prefix_length + length - suffix_length,
+               suffix, suffix_length) == 0)
+        length -= suffix_length;
     if (length == 0 || length >= UNILOST_CLAIM_ID_LEN) return 0;
     for (i = 0; i < length; i++) {
         unsigned char ch = (unsigned char) uri.buf[prefix_length + i];
@@ -634,6 +642,63 @@ static void handle_update_claim(struct mg_connection *connection,
                       "{\"message\":\"Private handoff request updated.\",\"status\":%m}\n",
                       MG_ESC(status));
     }
+}
+
+static void handle_claim_messages(struct mg_connection *connection,
+                                  struct mg_http_message *request,
+                                  struct ServerContext *context) {
+    char id[UNILOST_CLAIM_ID_LEN];
+    char message[UNILOST_CLAIM_MESSAGE_LEN];
+    struct AuthUser user;
+    struct ClaimMessage messages[100];
+    struct mg_iobuf output = {0};
+    size_t count = 0, i;
+    int result;
+    if (!authenticate_request(connection, request, &user)) return;
+    if (!extract_claim_id(request->uri, id)) {
+        send_error(connection, 400, "invalid_claim_id", "The request ID is invalid.");
+        return;
+    }
+    if (method_is(request, "POST")) {
+        if (request->body.len > MAX_REQUEST_BODY || !is_json_object(request->body) ||
+            !read_required_string(request->body, "$.message", message, sizeof(message))) {
+            send_error(connection, 400, "invalid_chat_message", "Write a chat message.");
+            return;
+        }
+        result = database_create_claim_message(&context->database, id, user.id, message);
+        if (result == DATABASE_NOT_FOUND) {
+            send_error(connection, 404, "claim_not_found", "You are not a participant in this request.");
+        } else if (result != DATABASE_OK) {
+            send_error(connection, 503, "chat_unavailable", "The chat message could not be saved.");
+        } else {
+            mg_http_reply(connection, 201, JSON_HEADERS,
+                          "{\"message\":\"Chat message sent.\"}\n");
+        }
+        return;
+    }
+    result = database_list_claim_messages(&context->database, id, user.id,
+                                          messages, 100, &count);
+    if (result == DATABASE_ERROR) {
+        send_error(connection, 503, "chat_unavailable", "Chat messages could not be loaded.");
+        return;
+    }
+    if (!mg_iobuf_init(&output, 1024, 256)) {
+        send_error(connection, 500, "response_error", "Could not prepare the response.");
+        return;
+    }
+    append_json(&output, "{\"messages\":[");
+    for (i = 0; i < count; i++) {
+        if (i > 0) append_json(&output, ",");
+        append_json(&output,
+                    "{\"id\":%m,\"sender_id\":%m,\"message\":%m,"
+                    "\"is_own\":%s,\"created_at\":%m}",
+                    MG_ESC(messages[i].id), MG_ESC(messages[i].sender_id),
+                    MG_ESC(messages[i].message),
+                    strcmp(messages[i].sender_id, user.id) == 0 ? "true" : "false",
+                    MG_ESC(messages[i].created_at));
+    }
+    append_json(&output, "],\"count\":%zu}\n", count);
+    reply_with_buffer(connection, 200, &output);
 }
 
 static void append_match_json(struct mg_iobuf *output, const struct Match *match) {
@@ -873,6 +938,10 @@ static void handle_request(struct mg_connection *connection, int event,
     } else if (mg_match(request->uri, mg_str("/api/claims"), NULL)) {
         if (method_is(request, "GET")) handle_list_claims(connection, request, context);
         else send_error(connection, 405, "method_not_allowed", "Use GET for this endpoint.");
+    } else if (mg_match(request->uri, mg_str("/api/claims/#/messages"), NULL)) {
+        if (method_is(request, "GET") || method_is(request, "POST"))
+            handle_claim_messages(connection, request, context);
+        else send_error(connection, 405, "method_not_allowed", "Use GET or POST for this endpoint.");
     } else if (mg_match(request->uri, mg_str("/api/claims/#"), NULL)) {
         if (method_is(request, "PATCH")) handle_update_claim(connection, request, context);
         else send_error(connection, 405, "method_not_allowed", "Use PATCH for this endpoint.");

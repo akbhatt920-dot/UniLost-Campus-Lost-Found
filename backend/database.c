@@ -605,12 +605,14 @@ int database_create_claim(struct Database *database, const char *item_id,
                           const char *requester_contact,
                           char claim_id[UNILOST_CLAIM_ID_LEN]) {
     static const char query[] =
-        "INSERT INTO public.claims (item_id, requester_id, message, "
-        "requester_contact, status) "
+        "WITH inserted AS ("
+        "INSERT INTO public.claims (item_id, requester_id, message, requester_contact, status) "
         "SELECT i.id, $2::uuid, $3, $4, 'pending' "
         "FROM public.items i WHERE i.id::text=$1 AND i.status='open' "
         "AND i.user_id IS NOT NULL AND i.user_id<>$2::uuid "
-        "ON CONFLICT (item_id, requester_id) DO NOTHING RETURNING id::text";
+        "ON CONFLICT (item_id, requester_id) DO NOTHING RETURNING id, requester_id, message) "
+        "INSERT INTO public.claim_messages (claim_id, sender_id, message) "
+        "SELECT id, requester_id, message FROM inserted RETURNING claim_id::text";
     const char *values[4] = {item_id, requester_id, message, requester_contact};
     PGconn *connection;
     PGresult *result;
@@ -650,6 +652,8 @@ static void read_claim(PGresult *result, int row, struct Claim *claim,
                     sizeof(claim->requester_contact));
     copy_column(result, row, 7, claim->status, sizeof(claim->status));
     copy_column(result, row, 8, claim->created_at, sizeof(claim->created_at));
+    copy_column(result, row, 9, claim->conversation_name,
+                sizeof(claim->conversation_name));
 }
 
 int database_list_claims(struct Database *database, const char *user_id,
@@ -658,14 +662,18 @@ int database_list_claims(struct Database *database, const char *user_id,
     static const char received_query[] =
         "SELECT c.id::text, i.id::text, i.item_name, i.report_type, i.category, "
         "c.message, c.requester_contact, c.status, "
-        "TO_CHAR(c.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS') "
+        "TO_CHAR(c.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS'), "
+        "COALESCE(rp.full_name, 'Requester') "
         "FROM public.claims c JOIN public.items i ON i.id=c.item_id "
+        "LEFT JOIN public.profiles rp ON rp.user_id=c.requester_id "
         "WHERE i.user_id::text=$1 ORDER BY c.created_at DESC LIMIT 100";
     static const char sent_query[] =
         "SELECT c.id::text, i.id::text, i.item_name, i.report_type, i.category, "
         "c.message, ''::text, c.status, "
-        "TO_CHAR(c.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS') "
+        "TO_CHAR(c.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS'), "
+        "COALESCE(op.full_name, 'Report owner') "
         "FROM public.claims c JOIN public.items i ON i.id=c.item_id "
+        "LEFT JOIN public.profiles op ON op.user_id=i.user_id "
         "WHERE c.requester_id::text=$1 ORDER BY c.created_at DESC LIMIT 100";
     const char *values[1] = {user_id};
     PGconn *connection;
@@ -711,6 +719,86 @@ int database_update_claim(struct Database *database, const char *claim_id,
     result = PQexecParams(connection, query, 3, NULL, values, NULL, NULL, 0);
     if (!query_succeeded(result)) {
         if (result != NULL) PQclear(result);
+        close_bad_connection(database);
+        return DATABASE_ERROR;
+    }
+    if (PQntuples(result) == 0) {
+        PQclear(result);
+        close_bad_connection(database);
+        return DATABASE_NOT_FOUND;
+    }
+    PQclear(result);
+    close_bad_connection(database);
+    return DATABASE_OK;
+}
+
+int database_list_claim_messages(struct Database *database,
+                                 const char *claim_id, const char *user_id,
+                                 struct ClaimMessage messages[],
+                                 size_t capacity, size_t *count) {
+    static const char query[] =
+        "SELECT cm.id::text, cm.sender_id::text, cm.message, "
+        "TO_CHAR(cm.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS') "
+        "FROM public.claim_messages cm "
+        "JOIN public.claims c ON c.id=cm.claim_id "
+        "JOIN public.items i ON i.id=c.item_id "
+        "WHERE cm.claim_id::text=$1 AND (c.requester_id::text=$2 OR i.user_id::text=$2) "
+        "ORDER BY cm.created_at ASC LIMIT 100";
+    const char *values[2] = {claim_id, user_id};
+    PGconn *connection;
+    PGresult *result;
+    size_t row_count;
+    int row;
+    if (count != NULL) *count = 0;
+    if (database == NULL || claim_id == NULL || user_id == NULL ||
+        messages == NULL || count == NULL) return DATABASE_ERROR;
+    connection = get_connection(database);
+    if (connection == NULL) return DATABASE_ERROR;
+    result = PQexecParams(connection, query, 2, NULL, values, NULL, NULL, 0);
+    if (!query_succeeded(result)) {
+        if (result != NULL) PQclear(result);
+        close_bad_connection(database);
+        return DATABASE_ERROR;
+    }
+    row_count = (size_t) PQntuples(result);
+    if (row_count > capacity) row_count = capacity;
+    for (row = 0; row < (int) row_count; row++) {
+        memset(&messages[row], 0, sizeof(messages[row]));
+        copy_column(result, row, 0, messages[row].id, sizeof(messages[row].id));
+        copy_column(result, row, 1, messages[row].sender_id, sizeof(messages[row].sender_id));
+        copy_column(result, row, 2, messages[row].message, sizeof(messages[row].message));
+        copy_column(result, row, 3, messages[row].created_at, sizeof(messages[row].created_at));
+    }
+    *count = row_count;
+    PQclear(result);
+    close_bad_connection(database);
+    return DATABASE_OK;
+}
+
+int database_create_claim_message(struct Database *database,
+                                  const char *claim_id, const char *user_id,
+                                  const char *message) {
+    static const char query[] =
+        "INSERT INTO public.claim_messages (claim_id, sender_id, message) "
+        "SELECT c.id, $2::uuid, $3 "
+        "FROM public.claims c JOIN public.items i ON i.id=c.item_id "
+        "WHERE c.id::text=$1 AND (c.requester_id=$2::uuid OR i.user_id=$2::uuid) "
+        "RETURNING id";
+    const char *values[3] = {claim_id, user_id, message};
+    PGconn *connection;
+    PGresult *result;
+    if (database == NULL || claim_id == NULL || user_id == NULL ||
+        message == NULL || message[0] == '\0') return DATABASE_ERROR;
+    connection = get_connection(database);
+    if (connection == NULL) return DATABASE_ERROR;
+    result = PQexecParams(connection, query, 3, NULL, values, NULL, NULL, 0);
+    if (!query_succeeded(result)) {
+        if (result != NULL) {
+            fprintf(stderr, "UniLost chat insert failed: %s\n", PQresultErrorMessage(result));
+            PQclear(result);
+        } else {
+            fprintf(stderr, "UniLost chat insert failed: no PostgreSQL result\n");
+        }
         close_bad_connection(database);
         return DATABASE_ERROR;
     }

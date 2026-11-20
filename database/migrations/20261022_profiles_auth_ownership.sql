@@ -45,7 +45,7 @@ BEGIN
                 id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
                 item_id %s NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
                 requester_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-                message varchar(500) NOT NULL,
+                message text NOT NULL,
                 requester_contact varchar(256) NOT NULL,
                 status text NOT NULL DEFAULT 'pending'
                     CHECK (status IN ('pending', 'accepted', 'declined')),

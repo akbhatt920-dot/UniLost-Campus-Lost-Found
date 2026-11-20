@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#283e32">
+  <title>Handoff Chats - UniLost</title>
+  <link rel="stylesheet" href="/css/site.css">
+  <script type="module" src="/js/app.js"></script>
+</head>
+
+<body data-page="chats" data-protected="true" data-auth-required="true">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header id="site-header"></header>
+  <main id="main" class="wrap page-main chat-page">
+    <p id="chat-status" class="chat-status" role="status">Loading conversations...</p>
+    <section class="chat-shell" aria-label="Handoff conversations">
+      <aside class="chat-sidebar">
+        <div class="chat-sidebar-head">
+          <div><p class="eyebrow">Messages</p><h1>Chats</h1></div>
+          <span class="chat-count" id="chat-count">0</span>
+        </div>
+        <div id="chat-conversations" class="chat-conversations">
+          <p class="loading">Loading conversations...</p>
+        </div>
+      </aside>
+      <section class="chat-thread">
+        <header class="chat-thread-head">
+          <div class="chat-person">
+            <div class="chat-avatar" id="chat-avatar" aria-hidden="true">U</div>
+            <div><h2 id="chat-thread-title">Select a conversation</h2><p id="chat-thread-meta">Private handoff</p></div>
+          </div>
+          <div class="chat-call-actions">
+            <button class="chat-icon-button" id="voice-call" type="button" aria-label="Start voice call" title="Voice call" disabled>Call</button>
+            <button class="chat-icon-button" id="video-call" type="button" aria-label="Start video call" title="Video call" disabled>Video</button>
+          </div>
+        </header>
+        <div id="chat-messages" class="chat-messages" aria-live="polite">
+          <div class="chat-empty-thread"><p>Select a conversation to view messages.</p></div>
+        </div>
+        <form id="chat-compose" class="chat-compose">
+          <textarea id="chat-input" name="message" rows="1" placeholder="Write a message..." required disabled></textarea>
+          <button class="chat-send" type="submit" disabled aria-label="Send message">Send</button>
+        </form>
+      </section>
+    </section>
+  </main>
+  <footer id="site-footer"></footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+
+</html>

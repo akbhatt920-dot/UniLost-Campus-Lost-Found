@@ -70,27 +70,16 @@
       </div>
     </section>
     <section class="panel security-panel">
-      <h2>Private handoff requests</h2>
-      <p class="field-hint">Requests about your reports are visible only to you. When someone requests a handoff, their
-        verified contact is shared with you privately.</p>
-      <h3 class="claim-list-title">Requests about your reports</h3>
-      <div id="received-claims" class="claim-list">
-        <p class="loading">Loading requests…</p>
-      </div>
-      <h3 class="claim-list-title">Requests you sent</h3>
-      <div id="sent-claims" class="claim-list">
-        <p class="loading">Loading requests…</p>
-      </div>
-    </section>
-    <section class="panel security-panel">
       <h2>Change password</h2>
       <form id="password-form" class="stack-form">
-        <label class="field"><span>Current password</span><input name="current_password" type="password"
-            autocomplete="current-password" required></label>
-        <label class="field"><span>New password</span><input name="password" type="password" autocomplete="new-password"
-            minlength="10" required></label>
-        <label class="field"><span>Confirm new password</span><input name="confirm_password" type="password"
-            autocomplete="new-password" minlength="10" required></label>
+        <label class="field password-field"><span>Current password</span><input name="current_password" type="password"
+            autocomplete="current-password" required><button class="password-toggle" type="button" aria-label="Show current password">Show</button></label>
+        <label class="field password-field"><span>Confirm old password</span><input name="confirm_current_password" type="password"
+            autocomplete="current-password" required><button class="password-toggle" type="button" aria-label="Show confirmed old password">Show</button></label>
+        <label class="field password-field"><span>New password</span><input name="password" type="password" autocomplete="new-password"
+            minlength="10" required><button class="password-toggle" type="button" aria-label="Show new password">Show</button></label>
+        <label class="field password-field"><span>Confirm new password</span><input name="confirm_password" type="password"
+            autocomplete="new-password" minlength="10" required><button class="password-toggle" type="button" aria-label="Show confirmed new password">Show</button></label>
         <button class="button secondary" type="submit">Update password</button>
         <p class="form-message" id="password-message" role="status" aria-live="polite"></p>
       </form>

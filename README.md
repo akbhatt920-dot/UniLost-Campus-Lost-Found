@@ -56,11 +56,11 @@ For an existing project, inspect the `items` and `matches` columns in Supabase *
 
 ### 2. Apply SQL
 
-- For a new, empty UniLost database, review and run `database/schema.sql`, then run `database/migrations/20261022_profiles_auth_ownership.sql` and `database/migrations/20261022_found_item_photos.sql`.
-- For an existing project, preserve `items` and `matches`, inspect their columns in Table Editor, then run `database/migrations/20261022_profiles_auth_ownership.sql` followed by `database/migrations/20261022_found_item_photos.sql`. These migrations add Auth ownership, claims, and private photo storage without deleting existing item data.
+- For a new, empty UniLost database, review and run `database/schema.sql`, then run `database/migrations/20261022_profiles_auth_ownership.sql`, `database/migrations/20261022_found_item_photos.sql`, and `database/migrations/20261120_claim_chat.sql`.
+- For an existing project, preserve `items` and `matches`, inspect their columns in Table Editor, then run `database/migrations/20261022_profiles_auth_ownership.sql`, `database/migrations/20261022_found_item_photos.sql`, and `database/migrations/20261120_claim_chat.sql` in that order. These migrations add Auth ownership, claims, private photo storage, and private handoff chat without deleting existing item data. The chat migration preserves the original request as the first message in older conversations.
 - The Auth and ownership migration creates `unilost_backend` if it is missing and grants the app's database access. The role still needs a login and password before the C server can connect.
 
-The migration does not update Supabase's internal Auth tables directly. Its trigger only reads `auth.users` insert/phone-confirmation events and mirrors verified profile fields into `public.profiles`. Email and phone changes still use Supabase Auth APIs.
+The migrations do not update Supabase's internal Auth tables directly. The profile trigger only reads `auth.users` insert/phone-confirmation events and mirrors verified profile fields into `public.profiles`. Email and phone changes still use Supabase Auth APIs.
 
 ### 3. Set the backend database password
 
@@ -181,6 +181,8 @@ Run `make build` to compile the C server and `make test` for standalone matcher 
 
 See [`docs/API_TESTING.md`](docs/API_TESTING.md) for curl examples. Use a fresh test account and non-sensitive fictional reports. Do not place an access token in shell history or share it.
 
+For the SEA submission, see [`docs/SEA_PROJECT_DOCUMENTATION.md`](docs/SEA_PROJECT_DOCUMENTATION.md). It contains the problem definition, objectives, system design, implementation, sample inputs and outputs, testing plan, demonstration plan, and viva preparation. Group names and individual responsibilities remain placeholders until entered.
+
 ## Security model and limits
 
 - Supabase Auth stores passwords and issues sessions. UniLost does not store password hashes.
@@ -197,9 +199,9 @@ See [`docs/API_TESTING.md`](docs/API_TESTING.md) for curl examples. Use a fresh 
 ```text
 backend/       C HTTP server, Supabase Auth verification, libpq queries, C matcher, Mongoose 7.23
 frontend/      multi-page HTML app, shared responsive stylesheet, browser Auth/API code
-database/      baseline schema and additive Auth/ownership and private-photo migrations
+database/      baseline schema and additive Auth/ownership, private-photo, and chat migrations
 tests/         matcher and public-key safety tests
-docs/          API checks and system flow
+docs/          SEA report, API checks, and system flow
 Makefile       Apple Clang build, run, test, clean
 ```
 
