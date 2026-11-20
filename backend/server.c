@@ -292,11 +292,18 @@ static void handle_health(struct mg_connection *connection,
 static void handle_public_config(struct mg_connection *connection) {
     const char *url = getenv("SUPABASE_URL");
     const char *key = getenv("SUPABASE_ANON_KEY");
+    const char *supabase_js_url = getenv("SUPABASE_JS_URL");
+    static const char sdk_prefix[] = "https://esm.sh/@supabase/supabase-js@";
     if (url == NULL) url = "";
     if (!auth_public_key_is_safe(key)) key = "";
+    if (supabase_js_url == NULL ||
+        strncmp(supabase_js_url, sdk_prefix, sizeof(sdk_prefix) - 1) != 0 ||
+        strpbrk(supabase_js_url, "?#\\\"' ") != NULL)
+        supabase_js_url = "";
     mg_http_reply(connection, 200, JSON_HEADERS,
-                  "{\"supabase_url\":%m,\"supabase_anon_key\":%m}\n",
-                  MG_ESC(url), MG_ESC(key));
+                  "{\"supabase_url\":%m,\"supabase_anon_key\":%m,"
+                  "\"supabase_js_url\":%m}\n",
+                  MG_ESC(url), MG_ESC(key), MG_ESC(supabase_js_url));
 }
 
 static void handle_summary(struct mg_connection *connection,

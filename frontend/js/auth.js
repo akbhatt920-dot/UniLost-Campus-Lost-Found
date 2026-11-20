@@ -8,8 +8,8 @@ export async function initAuth() {
     const response = await fetch('/api/config', { headers: { Accept: 'application/json' } });
     if (!response.ok) throw new Error('The local C server could not load its public configuration.');
     config = await response.json();
-    if (!config.supabase_url || !config.supabase_anon_key) return null;
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.102.0');
+    if (!config.supabase_url || !config.supabase_anon_key || !config.supabase_js_url) return null;
+    const { createClient } = await import(config.supabase_js_url);
     client = createClient(config.supabase_url, config.supabase_anon_key, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
     });

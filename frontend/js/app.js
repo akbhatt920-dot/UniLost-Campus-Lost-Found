@@ -187,7 +187,7 @@ async function routeGuard(session, authReady) {
   }
   if (!authReady) {
     const note = makeElement('p', 'form-message error',
-      'Authentication is not configured. Add SUPABASE_URL and SUPABASE_ANON_KEY to .env, then restart the C server.');
+      'Authentication is not configured. Add SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_JS_URL to .env, then restart the C server.');
     main?.replaceChildren(note);
     document.body.removeAttribute('data-auth-required');
     return false;
@@ -732,7 +732,7 @@ function initReport() {
       showMessage(message, `${result.message} Your report is now open.`);
       const success = byId('report-success');
       success.hidden = false;
-      const openChats = byId('report-find-matches');
+      const openChats = byId('report-open-chats');
       openChats.hidden = submittedType !== 'lost';
       openChats.textContent = 'Open handoff chats';
       openChats.href = '/chat.html';
@@ -749,72 +749,6 @@ function initReport() {
     }
     finally { button.disabled = false; updateReportType(); }
   });
-}
-
-function appendMatch(container, match, lostItem) {
-  if (!match?.found_item || !lostItem) return false;
-  const card = makeElement('article', 'match-card');
-  for (const [label, item] of [['Your lost report', lostItem], ['Potential found report', match.found_item]]) {
-    const info = makeElement('div', 'match-item');
-    info.append(makeElement('div', 'match-item-label', label));
-    attachItemPhoto(info, item, 'match');
-    info.append(makeElement('h3', '', item.item_name),
-      makeElement('p', '', `${item.category} · ${formatDate(item.item_date)}`),
-      makeElement('p', '', item.description), makeElement('p', '', item.location));
-    const details = makeElement('button', 'item-action details-action', 'View details');
-    details.type = 'button'; details.addEventListener('click', () => openItemDetails(item.id));
-    info.append(details);
-    card.append(info);
-  }
-  const score = makeElement('div', 'match-score');
-  const number = makeElement('div', 'score-number'); number.append(document.createTextNode(String(match.score)), makeElement('small', '', '/100'));
-  score.append(number, makeElement('div', 'score-strength', match.strength));
-  const factors = makeElement('div', 'factor-list');
-  for (const [key, label] of [['category', 'Category'], ['name', 'Name'], ['description', 'Description'], ['location', 'Location'], ['date', 'Date']]) {
-    factors.append(makeElement('span', 'factor-chip', `${label} ${Number(match.factors?.[key]) || 0}`));
-  }
-  score.append(factors); card.append(score);
-  card.append(makeElement('p', 'match-next-step', 'Compare distinctive details and arrange a safe campus handoff. Contact details are kept private.'));
-  container.append(card);
-  return true;
-}
-
-async function initMatches() {
-  const select = byId('lost-report-select'); const status = byId('match-status');
-  const results = byId('match-results');
-  try {
-    const payload = await apiRequest('/api/items?type=lost&mine=true', { auth: 'required' });
-    const open = payload.items.filter((item) => item.status === 'open');
-    select.replaceChildren(new Option(open.length ? 'Choose an open lost report' : 'You have no open lost reports', ''));
-    open.forEach((item) => select.add(new Option(`${item.item_name} · ${item.category} · ${formatDate(item.item_date)}`, item.id)));
-    const requestedId = new URLSearchParams(window.location.search).get('lost_id');
-    if (requestedId && open.some((item) => item.id === requestedId)) select.value = requestedId;
-  } catch (error) { select.replaceChildren(new Option(error.message, '')); status.textContent = error.message; }
-  byId('find-matches')?.addEventListener('click', async () => {
-    results.replaceChildren();
-    const id = select.value;
-    if (!id) { status.textContent = 'Choose one of your open lost reports first.'; return; }
-    status.textContent = 'C is comparing your report with open found reports…';
-    try {
-      const payload = await apiRequest(`/api/matches?lost_id=${encodeURIComponent(id)}`, { auth: 'required' });
-      if (!Array.isArray(payload.matches)) {
-        status.textContent = 'The matches service returned an invalid response. Try again in a moment.';
-        return;
-      }
-      const matches = payload.matches;
-      if (matches.length && (!payload.lost_item || matches.some((match) => !match?.found_item))) {
-        status.textContent = 'Matches were returned in an unexpected format. Refresh the page and try again.';
-        return;
-      }
-      status.textContent = matches.length
-        ? `${matches.length} potential match${matches.length === 1 ? '' : 'es'} found, ranked by score.`
-        : 'No potential matches scored 40 or higher yet.';
-      matches.forEach((match) => appendMatch(results, match, payload.lost_item));
-    } catch (error) { status.textContent = error.message; }
-  });
-  if (select.value && new URLSearchParams(window.location.search).has('lost_id')) {
-    byId('find-matches')?.click();
-  }
 }
 
 function togglePasswordButtons() {
@@ -1349,7 +1283,7 @@ async function initialize() {
     if (notice && detail) {
       detail.textContent = authInitFailed
         ? 'UniLost could not initialize sign-in. Check the C server, Supabase settings, and network connection, then reload.'
-        : 'Add SUPABASE_URL and SUPABASE_ANON_KEY to your local .env file, then restart the C server.';
+        : 'Add SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_JS_URL to your local .env file, then restart the C server.';
       notice.hidden = false;
     }
     document.querySelectorAll('form button[type=submit]').forEach((button) => { button.disabled = true; });

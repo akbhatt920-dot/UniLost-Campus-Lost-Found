@@ -79,6 +79,14 @@ curl -i -X PATCH http://127.0.0.1:8000/api/claims/PASTE_CLAIM_UUID \
   -H 'Authorization: Bearer TOKEN' \
   -H 'Content-Type: application/json' \
   --data '{"status":"accepted"}'
+
+# Read and send private messages as either participant in the handoff.
+curl -i http://127.0.0.1:8000/api/claims/PASTE_CLAIM_UUID/messages \
+  -H 'Authorization: Bearer TOKEN'
+curl -i -X POST http://127.0.0.1:8000/api/claims/PASTE_CLAIM_UUID/messages \
+  -H 'Authorization: Bearer TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{"message":"I can verify the item details privately."}'
 ```
 
 ## Expected denial and validation checks

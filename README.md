@@ -13,11 +13,12 @@ UniLost is a campus lost-and-found service. Supabase Auth handles accounts, the 
 | `/reset-password.html` | Set a new password after a valid recovery session |
 | `/report-item.html?type=lost` | Protected Report Lost form with an optional photo |
 | `/report-item.html?type=found` | Protected Report Found form with an optional photo |
-| `/matches.html` | Protected C-ranked matches for the signed-in user's open lost reports |
+| `/chat.html` | Private conversations for handoff requests |
+| `/matches.html` | Legacy URL that redirects to `/chat.html` |
 | `/reports.html?type=found` | Protected Browse Found Items board with search, category, location, status, date, sort, and page controls |
 | `/profile.html` | Protected profile editing, My Lost Items, My Found Items, verified contacts, handoff inbox, password change, and Sign Out |
 
-The authenticated navigation has exactly six entries: **Home, Report Lost, Report Found, Matches, Browse Found Items, Profile**. The older `/lost-items.html`, `/found-items.html`, `/report-lost.html`, and `/report-found.html` addresses remain protected redirects for compatibility; they are not extra navigation items.
+The authenticated navigation has exactly six entries: **Home, Report Lost, Report Found, Chats, Browse Found Items, Profile**. `/matches.html` remains a compatibility redirect to `/chat.html`. The older `/lost-items.html`, `/found-items.html`, `/report-lost.html`, and `/report-found.html` addresses remain protected redirects; they are not extra navigation items.
 
 Only sign-in, account creation, and password recovery are available without an account session. Protected pages and data APIs require a signed-in account. A protected deep link returns to its original page after login. Sign Out is available inside Profile, not in the shared navigation.
 
@@ -113,13 +114,15 @@ Create a file named `.env` in the project root and add your local values:
 DATABASE_URL='YOUR_POSTGRES_CONNECTION_STRING?sslmode=require'
 SUPABASE_URL='https://YOUR_PROJECT_REF.supabase.co'
 SUPABASE_ANON_KEY='YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY'
+SUPABASE_JS_URL='https://esm.sh/@supabase/supabase-js@2.102.0'
 ```
 
 - `DATABASE_URL`: PostgreSQL connection string for the dedicated `unilost_backend` login, with TLS (`sslmode=require`). Use the Supabase direct connection if your network supports it, or session pooler on IPv4-only networks. Percent-encode reserved characters in the password.
 - `SUPABASE_URL`: project URL from Supabase API settings, such as `https://your-project-ref.supabase.co`.
 - `SUPABASE_ANON_KEY`: the publishable key (`sb_publishable_…`) or legacy anon JWT key from Supabase API settings. **Never use a secret or `service_role` key.** The C config endpoint will not return those key types to the browser.
+- `SUPABASE_JS_URL`: the pinned Supabase JavaScript client module URL. It must use the `https://esm.sh/@supabase/supabase-js@` origin and is returned as public configuration.
 
-Keep `.env` private. It is ignored by Git. The Makefile loads `.env` only for `make run`; do not paste a database password or secret key into frontend files or commit them. The publishable/anon key is intentionally public and is used only for Supabase Auth requests.
+Keep `.env` private. It is ignored by Git. The Makefile loads `.env` only for `make run`; do not paste a database password or secret key into frontend files or commit them. The publishable/anon key and client module URL are public configuration used to initialize Supabase Auth. The app's own `/api/...` route paths are part of its source contract, not credentials or deployment settings.
 
 If the earlier database setup did not create a login for `unilost_backend`, review the role instructions in `database/schema.sql` and the prior setup notes. Use a unique password and do not use the Supabase `postgres` or service-role credential as the app's `DATABASE_URL`.
 
@@ -133,14 +136,14 @@ make test
 make run
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Press **Ctrl+C** in the server terminal to stop it. `make run` builds the C server if needed and loads `.env`. Sign-in, registration, and password recovery are available without a session; the home dashboard and all item, match, claim, and profile features require a valid Supabase session. If Supabase Auth is not configured, feature pages show a setup message and protected APIs deny requests.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Press **Ctrl+C** in the server terminal to stop it. `make run` builds the C server if needed and loads `.env`. Sign-in, registration, and password recovery are available without a session; the home dashboard and all item, match API, claim, chat, and profile features require a valid Supabase session. If Supabase Auth is not configured, feature pages show a setup message and protected APIs deny requests.
 
 Useful endpoints:
 
 | Endpoint | Access |
 |---|---|
 | `GET /api/health` | Public server/database readiness |
-| `GET /api/config` | Public Supabase URL and publishable/anon key only; needed to initialize Auth |
+| `GET /api/config` | Public Supabase URL, publishable/anon key, and SDK module URL; needed to initialize Auth |
 | `GET /api/summary` | Authenticated; counts the signed-in user's lost reports, found reports, and stored matches |
 | `GET /api/items?type=found&category=Wallet&search=black&location=library&status=open&date_from=2026-10-01&date_to=2026-10-31&sort=newest&limit=18&offset=0` | Authenticated; parameterized filters and bounded pages, with `total` and `has_more` |
 | `GET /api/items?type=lost&mine=true` | Authenticated; only the signed-in user's own reports |
@@ -154,6 +157,8 @@ Useful endpoints:
 | `GET /api/claims?scope=received` | Authenticated; incoming requests and requester contact for the signed-in owner's items |
 | `GET /api/claims?scope=sent` | Authenticated; the signed-in user's own outgoing request statuses, without owner contact |
 | `PATCH /api/claims/:id` | Authenticated; only the report owner can accept or decline a pending request |
+| `GET /api/claims/:id/messages` | Authenticated; only the requester and report owner can read the conversation |
+| `POST /api/claims/:id/messages` | Authenticated; only the requester and report owner can send a chat message |
 
 Email and phone changes use Supabase Auth in the browser and require verification. The C API never accepts a browser-supplied user ID as proof of ownership.
 

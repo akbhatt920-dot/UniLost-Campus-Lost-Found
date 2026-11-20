@@ -153,11 +153,11 @@ The front end is a multi-page HTML application with shared CSS and JavaScript.
 | `forgot-password.html` | Password recovery request |
 | `reset-password.html` | Set a new password |
 | `report-item.html` | Report a lost or found item |
-| `matches.html` | View ranked lost-item matches |
+| `chat.html` | Send and receive private handoff messages |
 | `reports.html` | Search and browse found-item reports |
 | `profile.html` | Profile, owned reports, verified contacts, and handoff inbox |
 
-Shared navigation contains exactly six entries: Home, Report Lost, Report Found, Matches, Browse Found Items, and Profile.
+Shared navigation contains exactly six entries: Home, Report Lost, Report Found, Chats, Browse Found Items, and Profile. The former `matches.html` URL redirects to `chat.html` for compatibility.
 
 Older lost/found page URLs remain as protected compatibility redirects. Sign-out is available inside Profile rather than shared navigation.
 
@@ -328,7 +328,7 @@ Automated tests cover the C matcher and public-key safety checks. They do not re
 2. Sign in with the test account.
 3. Submit a lost report.
 4. Submit a matching found report with a second account.
-5. Open Matches and verify the ranked result.
+5. Open Chats and verify the private handoff conversation.
 6. Submit a private handoff request.
 7. Open Profile with the owner account and view the requester's verified contact.
 8. Accept or decline the request.
@@ -352,7 +352,7 @@ Automated tests cover the C matcher and public-key safety checks. They do not re
 4. Report a fictional lost item.
 5. Browse found items and apply search/filter controls.
 6. Report a fictional matching found item from a second test account.
-7. Open Matches and explain each score factor.
+7. Explain the C matching score factors: category, name, description, location, and date.
 8. Submit a private handoff request.
 9. Switch to the item owner's account and review the private request.
 10. Accept or decline the request.
