@@ -152,7 +152,11 @@ static int date_is_not_future(const char *date) {
     time_t now = time(NULL);
     struct tm local_time;
     char today[UNILOST_DATE_LEN];
+#if defined(_WIN32)
+    if (localtime_s(&local_time, &now) != 0 ||
+#else
     if (localtime_r(&now, &local_time) == NULL ||
+#endif
         strftime(today, sizeof(today), "%Y-%m-%d", &local_time) == 0) return 0;
     return strcmp(date, today) <= 0;
 }

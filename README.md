@@ -36,18 +36,37 @@ libpq over TLS ──► Supabase PostgreSQL ◄── C ownership filters
        └── C matcher normalizes text, scores, explains, and ranks matches
 ```
 
-The frontend never connects directly to the database. It sends item and profile API requests to the C server. For protected requests, C sends the bearer token to the configured Supabase Auth `/auth/v1/user` endpoint over macOS CFNetwork HTTPS. Supabase Auth validates the token and returns the authoritative user record; C uses that returned ID and never treats decoded, unverified JWT claims as identity. This uses Supabase's supported Auth-server verification path described in its [JWT verification guidance](https://supabase.com/docs/guides/auth/jwts). The C server performs owner-scoped queries and only returns public item fields. The configured publishable/anon key is public by design; service-role and secret keys are rejected by the config endpoint and must never be placed in `.env` for this app.
+The frontend never connects directly to the database. It sends item and profile API requests to the C server. For protected requests, C sends the bearer token to the configured Supabase Auth `/auth/v1/user` endpoint over HTTPS, using WinHTTP on Windows and CFNetwork on macOS. Supabase Auth validates the token and returns the authoritative user record; C uses that returned ID and never treats decoded, unverified JWT claims as identity. This uses Supabase's supported Auth-server verification path described in its [JWT verification guidance](https://supabase.com/docs/guides/auth/jwts). The C server performs owner-scoped queries and only returns public item fields. The configured publishable/anon key is public by design; service-role and secret keys are rejected by the config endpoint and must never be placed in `.env` for this app.
 
 The Auth verification request is synchronous in this localhost classroom server, so a slow Auth response temporarily blocks other requests. Do not expose this prototype to the public internet without rate limiting, asynchronous upstream calls, deployment hardening, and a security review.
 
 ## Requirements
 
-- macOS with Apple Clang and `make`
-- Homebrew `libpq` (`brew install libpq` if needed)
+- macOS with Apple Clang, `make`, and Homebrew `libpq`
+- Windows 10 or later with Visual Studio 2022 C/C++ tools, CMake, and PostgreSQL client development files (`libpq` headers, library, and `pg_config.exe`)
 - A Supabase project with PostgreSQL and Auth enabled
 - Network access from the C server to Supabase Auth and PostgreSQL
 
-The build uses Homebrew's detected `libpq` prefix and macOS's built-in CoreFoundation/CFNetwork frameworks. No Node.js server or Node build step is used. The browser imports the official `@supabase/supabase-js` package as an ES module from esm.sh.
+The macOS build uses Homebrew's `libpq` and Apple networking frameworks. The Windows build uses the Windows SDK's WinHTTP and Winsock libraries plus PostgreSQL's `libpq`. No Node.js server or Node build step is used. The browser imports the official `@supabase/supabase-js` package as an ES module from esm.sh.
+
+### Windows build and run
+
+The Makefile commands below are for macOS. On Windows, install Visual Studio 2022 C/C++ build tools, CMake, and PostgreSQL client development files. Make sure `pg_config.exe` is available on `PATH`. Create the project-root `.env` using the same values described below, then run from PowerShell:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\scripts\run-windows.ps1
+```
+
+The script configures and builds the native Windows server with CMake, loads the ignored `.env` values into the current process, and starts the site at `http://127.0.0.1:8000`. Stop it with **Ctrl+C**. To run the tests from a Visual Studio Developer PowerShell:
+
+```powershell
+cmake -S . -B build -A x64
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
+
+macOS users can continue to use `make build`, `make test`, and `make run`.
 
 ## Set up Supabase
 
@@ -128,7 +147,7 @@ If the earlier database setup did not create a login for `unilost_backend`, revi
 
 ## Build and run
 
-From the project root:
+On macOS, from the project root:
 
 ```sh
 make build
@@ -136,7 +155,9 @@ make test
 make run
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Press **Ctrl+C** in the server terminal to stop it. `make run` builds the C server if needed and loads `.env`. Sign-in, registration, and password recovery are available without a session; the home dashboard and all item, match API, claim, chat, and profile features require a valid Supabase session. If Supabase Auth is not configured, feature pages show a setup message and protected APIs deny requests.
+On Windows, use the PowerShell instructions in [Windows build and run](#windows-build-and-run), not `make`.
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Press **Ctrl+C** in the server terminal to stop it. The platform-specific run command builds the C server and loads `.env`. Sign-in, registration, and password recovery are available without a session; the home dashboard and all item, match API, claim, chat, and profile features require a valid Supabase session. If Supabase Auth is not configured, feature pages show a setup message and protected APIs deny requests.
 
 Useful endpoints:
 
@@ -183,7 +204,7 @@ Results scoring 40 or more are stored once per lost/found pair and sorted highes
 
 ## Tests and verification
 
-Run `make build` to compile the C server and `make test` for standalone matcher and public-key safety tests; the tests do not need Supabase. Browser interaction, email-link delivery, password recovery, SMS, photo Storage policies, profile persistence, and owner-bound PostgreSQL actions require the configured Supabase project and must be tested there. A passing C build or unit test does not establish that hosted flows are working.
+On macOS, run `make build` and `make test`. On Windows, use the CMake and `ctest` commands in [Windows build and run](#windows-build-and-run). The standalone tests do not need Supabase. Browser interaction, email-link delivery, password recovery, SMS, photo Storage policies, profile persistence, and owner-bound PostgreSQL actions require the configured Supabase project and must be tested there. A passing C build or unit test does not establish that hosted flows are working.
 
 See [`docs/API_TESTING.md`](docs/API_TESTING.md) for curl examples. Use a fresh test account and non-sensitive fictional reports. Do not place an access token in shell history or share it.
 
