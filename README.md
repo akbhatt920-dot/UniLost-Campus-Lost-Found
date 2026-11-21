@@ -57,8 +57,8 @@ For an existing project, inspect the `items` and `matches` columns in Supabase *
 
 ### 2. Apply SQL
 
-- For a new, empty UniLost database, review and run `database/schema.sql`, then run `database/migrations/20261022_profiles_auth_ownership.sql`, `database/migrations/20261022_found_item_photos.sql`, and `database/migrations/20261120_claim_chat.sql`.
-- For an existing project, preserve `items` and `matches`, inspect their columns in Table Editor, then run `database/migrations/20261022_profiles_auth_ownership.sql`, `database/migrations/20261022_found_item_photos.sql`, and `database/migrations/20261120_claim_chat.sql` in that order. These migrations add Auth ownership, claims, private photo storage, and private handoff chat without deleting existing item data. The chat migration preserves the original request as the first message in older conversations.
+- For a new, empty UniLost database, review and run `database/schema.sql`, then run `database/migrations/20261022_profiles_auth_ownership.sql`, `database/migrations/20261022_found_item_photos.sql`, `database/migrations/20261120_claim_chat.sql`, and `database/migrations/20261121_report_removal.sql`.
+- For an existing project, preserve `items` and `matches`, inspect their columns in Table Editor, then run `database/migrations/20261022_profiles_auth_ownership.sql`, `database/migrations/20261022_found_item_photos.sql`, `database/migrations/20261120_claim_chat.sql`, and `database/migrations/20261121_report_removal.sql` in that order. These migrations add Auth ownership, claims, private photo storage, private handoff chat, and owner-only report removal without deleting existing item data. The chat migration preserves the original request as the first message in older conversations.
 - The Auth and ownership migration creates `unilost_backend` if it is missing and grants the app's database access. The role still needs a login and password before the C server can connect.
 
 The migrations do not update Supabase's internal Auth tables directly. The profile trigger only reads `auth.users` insert/phone-confirmation events and mirrors verified profile fields into `public.profiles`. Email and phone changes still use Supabase Auth APIs.
@@ -150,7 +150,8 @@ Useful endpoints:
 | `GET /api/items/:id` | Authenticated; safe item fields and viewer ownership flags, never contact details |
 | `POST /api/items` | Authenticated; C validates and saves owner ID from Supabase Auth |
 | `GET /api/matches?lost_id=UUID` | Authenticated; only the owner of the lost report can request it |
-| `PATCH /api/items/:id/status` | Authenticated; only the item owner can update an open item |
+| `GET /api/matches` | Authenticated; best open found-item matches across the caller's open lost reports |
+| `DELETE /api/items/:id` | Authenticated; removes an open report owned by the signed-in user and its related matches and handoff chats |
 | `GET /api/profile` | Authenticated; only the verified account's own profile |
 | `PATCH /api/profile` | Authenticated; updates the verified account's display name |
 | `POST /api/items/:id/claims` | Authenticated; shares a verified contact only with the report owner |

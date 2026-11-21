@@ -84,8 +84,8 @@ int database_get_open_found(struct Database *database, struct Item items[],
                             size_t capacity, size_t *count);
 int database_store_match(struct Database *database, const char *lost_id,
                          const char *found_id, int score);
-int database_update_item_status(struct Database *database, const char *id,
-                                const char *owner_id, const char *status);
+int database_delete_open_item(struct Database *database, const char *id,
+                              const char *owner_id);
 int database_get_profile(struct Database *database, const char *user_id,
                          struct Profile *profile);
 int database_save_profile(struct Database *database, const char *user_id,

@@ -493,23 +493,22 @@ int database_store_match(struct Database *database, const char *lost_id,
     return DATABASE_OK;
 }
 
-int database_update_item_status(struct Database *database, const char *id,
-                                const char *owner_id, const char *status) {
-    static const char update_query[] =
-        "UPDATE items SET status=$1 WHERE id::text=$2 AND user_id::text=$3 "
+int database_delete_open_item(struct Database *database, const char *id,
+                               const char *owner_id) {
+    static const char delete_query[] =
+        "DELETE FROM items WHERE id::text=$1 AND user_id::text=$2 "
         "AND status='open' RETURNING id";
     static const char exists_query[] =
         "SELECT id FROM items WHERE id::text=$1 AND user_id::text=$2";
-    const char *values[3] = {status, id, owner_id};
+    const char *values[2] = {id, owner_id};
     PGconn *connection;
     PGresult *result;
 
-    if (database == NULL || id == NULL || owner_id == NULL || status == NULL ||
-        (strcmp(status, "claimed") != 0 && strcmp(status, "closed") != 0))
+    if (database == NULL || id == NULL || owner_id == NULL)
         return DATABASE_ERROR;
     connection = get_connection(database);
     if (connection == NULL) return DATABASE_ERROR;
-    result = PQexecParams(connection, update_query, 3, NULL, values, NULL, NULL, 0);
+    result = PQexecParams(connection, delete_query, 2, NULL, values, NULL, NULL, 0);
     if (!query_succeeded(result)) {
         if (result != NULL) PQclear(result);
         close_bad_connection(database);

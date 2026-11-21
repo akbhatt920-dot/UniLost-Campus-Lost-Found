@@ -22,39 +22,42 @@
         send a private note if something might be yours.</p>
     </section>
     <section class="panel filter-panel" aria-label="Filter item listings">
-      <label class="field filter-search"><span>Search</span><input id="search-filter" type="search" maxlength="200"
-          placeholder="Item name or description"></label>
-      <label class="field"><span>Category</span><select id="category-filter">
-          <option value="">All categories</option>
-          <option>ID Card</option>
-          <option>Wallet</option>
-          <option>Electronics</option>
-          <option>Bottle</option>
-          <option>Keys</option>
-          <option>Bag</option>
-          <option>Stationery</option>
-          <option>Clothing</option>
-          <option>Other</option>
-        </select></label>
-      <label class="field"><span>Location</span><input id="location-filter" type="search" maxlength="120"
-          placeholder="Campus place"></label>
-      <label class="field"><span>Status</span><select id="status-filter">
-          <option value="">All statuses</option>
-          <option value="open">Available</option>
-          <option value="claimed">Claimed</option>
-          <option value="closed">Closed</option>
-        </select></label>
-      <label class="field"><span>Found on or after</span><input id="date-from-filter" type="date"></label>
-      <label class="field"><span>Found on or before</span><input id="date-to-filter" type="date"></label>
-      <label class="field"><span>Sort by</span><select id="sort-filter">
-          <option value="newest">Newest report</option>
-          <option value="oldest">Oldest report</option>
-          <option value="date">Most recently found</option>
-          <option value="name">Item name</option>
-        </select></label>
+      <div class="filter-fields">
+        <label class="field filter-search"><span>Search</span><input id="search-filter" type="search" maxlength="200"
+            placeholder="Item name or description"></label>
+        <label class="field"><span>Category</span><select id="category-filter">
+            <option value="">All categories</option>
+            <option>ID Card</option>
+            <option>Wallet</option>
+            <option>Electronics</option>
+            <option>Bottle</option>
+            <option>Keys</option>
+            <option>Bag</option>
+            <option>Stationery</option>
+            <option>Clothing</option>
+            <option>Other</option>
+          </select></label>
+        <label class="field"><span>Location</span><input id="location-filter" type="search" maxlength="120"
+            placeholder="Campus place"></label>
+        <label class="field"><span>Status</span><select id="status-filter">
+            <option value="">All statuses</option>
+            <option value="open">Available</option>
+            <option value="claimed">Claimed</option>
+            <option value="closed">Closed</option>
+          </select></label>
+        <label class="field"><span>Found on or after</span><input id="date-from-filter" type="date"></label>
+        <label class="field"><span>Found on or before</span><input id="date-to-filter" type="date"></label>
+        <label class="field"><span>Sort by</span><select id="sort-filter">
+            <option value="newest">Newest report</option>
+            <option value="oldest">Oldest report</option>
+            <option value="date">Most recently found</option>
+            <option value="name">Item name</option>
+          </select></label>
+      </div>
       <div class="filter-actions">
         <button class="button secondary" id="clear-filters" type="button">Clear filters</button>
         <button class="button secondary" id="refresh-items" type="button">Refresh</button>
+        <button class="button primary" id="show-matches" type="button" aria-pressed="false">Matches</button>
       </div>
       <p class="filter-note" id="active-filter-count" aria-live="polite">No filters applied</p>
     </section>

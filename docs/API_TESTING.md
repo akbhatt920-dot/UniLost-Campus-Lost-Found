@@ -51,10 +51,12 @@ curl -i -X POST http://127.0.0.1:8000/api/items \
 curl -i 'http://127.0.0.1:8000/api/matches?lost_id=PASTE_YOUR_LOST_ITEM_ID' \
   -H 'Authorization: Bearer TOKEN'
 
-curl -i -X PATCH http://127.0.0.1:8000/api/items/PASTE_YOUR_ITEM_ID/status \
-  -H 'Authorization: Bearer TOKEN' \
-  -H 'Content-Type: application/json' \
-  --data '{"status":"claimed"}'
+# Aggregate the best open found-item matches across your open lost reports.
+curl -i http://127.0.0.1:8000/api/matches \
+  -H 'Authorization: Bearer TOKEN'
+
+curl -i -X DELETE http://127.0.0.1:8000/api/items/PASTE_YOUR_ITEM_ID \
+  -H 'Authorization: Bearer TOKEN'
 
 curl -i -X PATCH http://127.0.0.1:8000/api/profile \
   -H 'Authorization: Bearer TOKEN' \
@@ -101,12 +103,12 @@ curl -i 'http://127.0.0.1:8000/api/items?type=unknown'
 # Invalid detail ID: 400
 curl -i http://127.0.0.1:8000/api/items/not-a-uuid
 
-# Missing match ID: authenticated caller receives 400
+# The no-ID match request is valid and checks all open lost reports owned by the caller.
 curl -i http://127.0.0.1:8000/api/matches -H 'Authorization: Bearer TOKEN'
 ```
 
-The server returns `401` for missing/invalid sessions, `503` if it cannot reach Supabase Auth or PostgreSQL, and does not accept a browser-supplied owner ID. Claim submission also requires a verified email or phone; the requester explicitly shares that verified contact with the report owner by submitting the request. A different user attempting to update an item, request matches, read its claims, or update a claim receives a not-found response. Test ownership using two separate Supabase test accounts.
+The server returns `401` for missing/invalid sessions, `503` if it cannot reach Supabase Auth or PostgreSQL, and does not accept a browser-supplied owner ID. Claim submission also requires a verified email or phone; the requester explicitly shares that verified contact with the report owner by submitting the request. A different user attempting to remove an item, request matches, read its claims, or update a claim receives a not-found response. Test ownership using two separate Supabase test accounts.
 
-`GET /api/items` accepts `type`, `category`, `search`, `location`, `status`, `date_from`, `date_to`, `sort`, `mine=true`, `limit` (1–50), and `offset`. Sort values are `newest`, `oldest`, `name`, and `date`. The response includes the page `count`, filtered `total`, `has_more`, `limit`, and `offset`.
+`GET /api/items` accepts `type`, `category`, `search`, `location`, `status`, `date_from`, `date_to`, `sort`, `mine=true`, `limit` (1–50), and `offset`. Sort values are `newest`, `oldest`, `name`, and `date`. The response includes the page `count`, filtered `total`, `has_more`, `limit`, and `offset`. `DELETE /api/items/UUID` removes an open report owned by the caller; related matches, requests, and messages are also deleted. `GET /api/matches?lost_id=UUID` checks one open lost report owned by the caller; `GET /api/matches` checks the caller's open lost reports and returns the strongest match for each found item. Both forms require authentication and only consider open found items.
 
 Supabase persistence, Auth email delivery, SMS, and account recovery must be tested against the project's actual provider settings. Never use sample data that contains real people's contact details.

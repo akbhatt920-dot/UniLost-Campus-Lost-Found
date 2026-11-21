@@ -122,7 +122,8 @@ REVOKE ALL ON TABLE public.items, public.matches FROM anon, authenticated;
 
 GRANT USAGE ON SCHEMA public TO unilost_backend;
 GRANT SELECT, INSERT ON TABLE public.items TO unilost_backend;
-GRANT UPDATE (status) ON TABLE public.items TO unilost_backend;
+GRANT DELETE ON TABLE public.items TO unilost_backend;
+REVOKE UPDATE (status) ON TABLE public.items FROM unilost_backend;
 GRANT SELECT, INSERT ON TABLE public.matches TO unilost_backend;
 GRANT UPDATE (match_score) ON TABLE public.matches TO unilost_backend;
 
@@ -146,6 +147,7 @@ $$;
 DROP POLICY IF EXISTS unilost_backend_items_select ON public.items;
 DROP POLICY IF EXISTS unilost_backend_items_insert ON public.items;
 DROP POLICY IF EXISTS unilost_backend_items_update ON public.items;
+DROP POLICY IF EXISTS unilost_backend_items_delete ON public.items;
 DROP POLICY IF EXISTS unilost_backend_matches_select ON public.matches;
 DROP POLICY IF EXISTS unilost_backend_matches_insert ON public.matches;
 DROP POLICY IF EXISTS unilost_backend_matches_update ON public.matches;
@@ -154,10 +156,8 @@ CREATE POLICY unilost_backend_items_select ON public.items
     FOR SELECT TO unilost_backend USING (true);
 CREATE POLICY unilost_backend_items_insert ON public.items
     FOR INSERT TO unilost_backend WITH CHECK (true);
-CREATE POLICY unilost_backend_items_update ON public.items
-    FOR UPDATE TO unilost_backend
-    USING (status = 'open')
-    WITH CHECK (status IN ('claimed', 'closed'));
+CREATE POLICY unilost_backend_items_delete ON public.items
+    FOR DELETE TO unilost_backend USING (status = 'open');
 
 CREATE POLICY unilost_backend_matches_select ON public.matches
     FOR SELECT TO unilost_backend USING (true);

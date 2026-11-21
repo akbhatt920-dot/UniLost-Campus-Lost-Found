@@ -18,7 +18,10 @@
     <section class="chat-shell" aria-label="Handoff conversations">
       <aside class="chat-sidebar">
         <div class="chat-sidebar-head">
-          <div><p class="eyebrow">Messages</p><h1>Chats</h1></div>
+          <div>
+            <p class="eyebrow">Messages</p>
+            <h1>Chats</h1>
+          </div>
           <span class="chat-count" id="chat-count">0</span>
         </div>
         <div id="chat-conversations" class="chat-conversations">
@@ -29,18 +32,26 @@
         <header class="chat-thread-head">
           <div class="chat-person">
             <div class="chat-avatar" id="chat-avatar" aria-hidden="true">U</div>
-            <div><h2 id="chat-thread-title">Select a conversation</h2><p id="chat-thread-meta">Private handoff</p></div>
+            <div>
+              <h2 id="chat-thread-title">Select a conversation</h2>
+              <p id="chat-thread-meta">Private handoff</p>
+            </div>
           </div>
           <div class="chat-call-actions">
-            <button class="chat-icon-button" id="voice-call" type="button" aria-label="Start voice call" title="Voice call" disabled>Call</button>
-            <button class="chat-icon-button" id="video-call" type="button" aria-label="Start video call" title="Video call" disabled>Video</button>
+            <button class="chat-icon-button" id="voice-call" type="button" aria-label="Start voice call"
+              title="Voice call" disabled>Call</button>
+            <button class="chat-icon-button" id="video-call" type="button" aria-label="Start video call"
+              title="Video call" disabled>Video</button>
           </div>
         </header>
         <div id="chat-messages" class="chat-messages" aria-live="polite">
-          <div class="chat-empty-thread"><p>Select a conversation to view messages.</p></div>
+          <div class="chat-empty-thread">
+            <p>Select a conversation to view messages.</p>
+          </div>
         </div>
         <form id="chat-compose" class="chat-compose">
-          <textarea id="chat-input" name="message" rows="1" placeholder="Write a message..." required disabled></textarea>
+          <textarea id="chat-input" name="message" rows="1" placeholder="Write a message..." required
+            disabled></textarea>
           <button class="chat-send" type="submit" disabled aria-label="Send message">Send</button>
         </form>
       </section>

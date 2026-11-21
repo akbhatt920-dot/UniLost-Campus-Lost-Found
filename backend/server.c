@@ -730,11 +730,89 @@ static void handle_matches(struct mg_connection *connection,
     struct mg_iobuf output = {0};
     size_t found_count = 0, match_count = 0, i;
     struct AuthUser user;
-    int result;
+    int result, lost_id_result;
 
     if (!authenticate_request(connection, request, &user)) return;
 
-    if (query_parameter(request, "lost_id", lost_id, sizeof(lost_id)) != 1) {
+    lost_id_result = query_parameter(request, "lost_id", lost_id, sizeof(lost_id));
+    if (lost_id_result < 0) {
+        send_error(connection, 400, "invalid_lost_id", "The lost report ID is invalid.");
+        return;
+    }
+    if (lost_id_result == 0) {
+        struct Item lost_items[MAX_ITEMS];
+        size_t lost_count = 0, lost_total = 0, lost_offset = 0;
+        size_t lost_index, found_index, lost_reports_checked = 0;
+        if (database_list_items(&context->database, "lost", NULL, NULL, NULL,
+                                user.id, user.id, "open", NULL, NULL, "newest",
+                                MAX_ITEMS, 0, lost_items, MAX_ITEMS, &lost_count,
+                                &lost_total) != DATABASE_OK ||
+            database_get_open_found(&context->database, found_items, MAX_ITEMS,
+                                    &found_count) != DATABASE_OK) {
+            send_error(connection, 503, "database_unavailable",
+                       "Check the database connection and apply database/schema.sql.");
+            return;
+        }
+        while (lost_offset < lost_total && lost_count > 0) {
+            if (lost_offset > 0 &&
+                database_list_items(&context->database, "lost", NULL, NULL, NULL,
+                                    user.id, user.id, "open", NULL, NULL, "newest",
+                                    MAX_ITEMS, (int) lost_offset, lost_items, MAX_ITEMS,
+                                    &lost_count, &lost_total) != DATABASE_OK) {
+                send_error(connection, 503, "database_unavailable",
+                           "Could not load all of your open lost reports.");
+                return;
+            }
+            for (lost_index = 0; lost_index < lost_count; lost_index++) {
+                for (found_index = 0; found_index < found_count; found_index++) {
+                    struct Match candidate = {0};
+                    size_t existing;
+                    if (strcmp(lost_items[lost_index].id,
+                               found_items[found_index].id) == 0) continue;
+                    candidate.lost = lost_items[lost_index];
+                    candidate.found = found_items[found_index];
+                    unilost_calculate_score(&candidate.lost, &candidate.found,
+                                            &candidate.score);
+                    if (candidate.score.total < 40) continue;
+                    for (existing = 0; existing < match_count; existing++)
+                        if (strcmp(matches[existing].found.id,
+                                   candidate.found.id) == 0) break;
+                    if (existing < match_count) {
+                        if (candidate.score.total > matches[existing].score.total)
+                            matches[existing] = candidate;
+                        continue;
+                    }
+                    if (match_count < MAX_ITEMS) matches[match_count++] = candidate;
+                }
+            }
+            lost_offset += lost_count;
+            lost_reports_checked += lost_count;
+        }
+        for (i = 0; i < match_count; i++) {
+            if (database_store_match(&context->database, matches[i].lost.id,
+                                     matches[i].found.id,
+                                     matches[i].score.total) != DATABASE_OK) {
+                send_error(connection, 503, "match_storage_failed",
+                           "The database could not save a potential match. Apply database/schema.sql.");
+                return;
+            }
+        }
+        unilost_sort_matches(matches, match_count);
+        if (!mg_iobuf_init(&output, 2048, 256)) {
+            send_error(connection, 500, "response_error", "Could not prepare the response.");
+            return;
+        }
+        append_json(&output, "{\"matches\":[");
+        for (i = 0; i < match_count; i++) {
+            if (i > 0) append_json(&output, ",");
+            append_match_json(&output, &matches[i]);
+        }
+        append_json(&output, "],\"count\":%zu,\"lost_reports_checked\":%zu}\n",
+                    match_count, lost_reports_checked);
+        reply_with_buffer(connection, 200, &output);
+        return;
+    }
+    if (lost_id[0] == '\0') {
         send_error(connection, 400, "missing_lost_id",
                    "Choose an open lost report using the lost_id query parameter.");
         return;
@@ -789,60 +867,29 @@ static void handle_matches(struct mg_connection *connection,
     reply_with_buffer(connection, 200, &output);
 }
 
-static int extract_status_item_id(struct mg_str uri, char id[UNILOST_ID_LEN]) {
-    static const char prefix[] = "/api/items/";
-    static const char suffix[] = "/status";
-    size_t prefix_length = sizeof(prefix) - 1;
-    size_t suffix_length = sizeof(suffix) - 1;
-    size_t id_length, i;
-
-    if (uri.len <= prefix_length + suffix_length ||
-        memcmp(uri.buf, prefix, prefix_length) != 0 ||
-        memcmp(uri.buf + uri.len - suffix_length, suffix, suffix_length) != 0)
-        return 0;
-    id_length = uri.len - prefix_length - suffix_length;
-    if (id_length == 0 || id_length >= UNILOST_ID_LEN) return 0;
-    for (i = 0; i < id_length; i++) {
-        unsigned char character = (unsigned char) uri.buf[prefix_length + i];
-        if (!isalnum(character) && character != '-') return 0;
-    }
-    memcpy(id, uri.buf + prefix_length, id_length);
-    id[id_length] = '\0';
-    return 1;
-}
-
-static void handle_item_status(struct mg_connection *connection,
+static void handle_delete_item(struct mg_connection *connection,
                                struct mg_http_message *request,
                                struct ServerContext *context) {
     char id[UNILOST_ID_LEN];
-    char status[16];
     struct AuthUser user;
     int result;
     if (!authenticate_request(connection, request, &user)) return;
-    if (!extract_status_item_id(request->uri, id)) {
+    if (!extract_item_id(request->uri, id)) {
         send_error(connection, 400, "invalid_item_id", "The item ID is invalid.");
         return;
     }
-    if (request->body.len > MAX_REQUEST_BODY || !is_json_object(request->body) ||
-        !read_required_string(request->body, "$.status", status, sizeof(status)) ||
-        (strcmp(status, "claimed") != 0 && strcmp(status, "closed") != 0)) {
-        send_error(connection, 400, "invalid_status",
-                   "Status must be claimed or closed.");
-        return;
-    }
-    result = database_update_item_status(&context->database, id, user.id, status);
+    result = database_delete_open_item(&context->database, id, user.id);
     if (result == DATABASE_NOT_FOUND) {
         send_error(connection, 404, "item_not_found", "No item with that ID was found.");
     } else if (result == DATABASE_CONFLICT) {
         send_error(connection, 409, "invalid_transition",
-                   "Only an open item can be marked claimed or closed.");
+                   "Only an open report can be removed from this page.");
     } else if (result != DATABASE_OK) {
         send_error(connection, 503, "database_unavailable",
-                   "Check the database connection and apply database/schema.sql.");
+                   "The report could not be removed. Please try again.");
     } else {
         mg_http_reply(connection, 200, JSON_HEADERS,
-                      "{\"message\":\"Item status updated.\",\"status\":%m}\n",
-                      MG_ESC(status));
+                      "{\"message\":\"Report removed.\"}\n");
     }
 }
 
@@ -926,15 +973,13 @@ static void handle_request(struct mg_connection *connection, int event,
         if (method_is(request, "GET")) handle_list_items(connection, request, context);
         else if (method_is(request, "POST")) handle_create_item(connection, request, context);
         else send_error(connection, 405, "method_not_allowed", "Use GET or POST for this endpoint.");
-    } else if (mg_match(request->uri, mg_str("/api/items/#/status"), NULL)) {
-        if (method_is(request, "PATCH")) handle_item_status(connection, request, context);
-        else send_error(connection, 405, "method_not_allowed", "Use PATCH for this endpoint.");
     } else if (mg_match(request->uri, mg_str("/api/items/#/claims"), NULL)) {
         if (method_is(request, "POST")) handle_create_claim(connection, request, context);
         else send_error(connection, 405, "method_not_allowed", "Use POST for this endpoint.");
     } else if (mg_match(request->uri, mg_str("/api/items/#"), NULL)) {
         if (method_is(request, "GET")) handle_get_item(connection, request, context);
-        else send_error(connection, 405, "method_not_allowed", "Use GET for this endpoint.");
+        else if (method_is(request, "DELETE")) handle_delete_item(connection, request, context);
+        else send_error(connection, 405, "method_not_allowed", "Use GET or DELETE for this endpoint.");
     } else if (mg_match(request->uri, mg_str("/api/matches"), NULL)) {
         if (method_is(request, "GET")) handle_matches(connection, request, context);
         else send_error(connection, 405, "method_not_allowed", "Use GET for this endpoint.");

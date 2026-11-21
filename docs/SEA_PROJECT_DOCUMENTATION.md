@@ -51,7 +51,7 @@ UniLost is a campus lost-and-found web application that allows signed-in users t
 - User profiles and verified contact details.
 - Private claim/handoff requests and owner inbox.
 - Accept or decline handoff requests.
-- Item status changes by the item owner.
+- Open reports can be removed by their owner.
 
 ### Limitations
 
@@ -307,7 +307,7 @@ offset = 0
 
 ### Unauthorized update check
 
-A second account attempts to update an item owned by the first account. The server returns a not-found or unauthorized ownership response, and no database status change occurs.
+A second account attempts to remove an item owned by the first account. The server returns a not-found or unauthorized ownership response, and the report remains in the database.
 
 ## 15. Testing
 
@@ -333,7 +333,8 @@ Automated tests cover the C matcher and public-key safety checks. They do not re
 7. Open Profile with the owner account and view the requester's verified contact.
 8. Accept or decline the request.
 9. Filter and paginate found items.
-10. Attempt an unauthorized status update and verify that it is denied.
+10. Remove a test report and verify it disappears from feeds and its related handoff data is removed.
+11. Attempt to remove another account's report and verify that the request is denied.
 
 ### Security and hosted-flow checks
 

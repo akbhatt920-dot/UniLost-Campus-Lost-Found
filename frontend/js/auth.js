@@ -6,7 +6,7 @@ export async function initAuth() {
   if (initPromise) return initPromise;
   initPromise = (async () => {
     const response = await fetch('/api/config', { headers: { Accept: 'application/json' } });
-    if (!response.ok) throw new Error('The local C server could not load its public configuration.');
+    if (!response.ok) throw new Error('Account services are unavailable right now. Please try again later.');
     config = await response.json();
     if (!config.supabase_url || !config.supabase_anon_key || !config.supabase_js_url) return null;
     const { createClient } = await import(config.supabase_js_url);
@@ -49,7 +49,7 @@ export async function apiRequest(path, options = {}) {
   try {
     response = await fetch(path, { ...fetchOptions, headers });
   } catch {
-    throw new Error('Could not reach the local C server. Check that it is running at http://127.0.0.1:8000.');
+    throw new Error('Could not reach UniLost. Check your connection and try again.');
   }
   let payload;
   try {

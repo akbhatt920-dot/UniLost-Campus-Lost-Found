@@ -11,6 +11,7 @@ let activeClaimButton = null;
 let browseOffset = 0;
 let browseTotal = 0;
 let browseRequestId = 0;
+let showingMatches = false;
 const PAGE_SIZE = 18;
 
 function showMessage(element, message, isError = false) {
@@ -187,7 +188,7 @@ async function routeGuard(session, authReady) {
   }
   if (!authReady) {
     const note = makeElement('p', 'form-message error',
-      'Authentication is not configured. Add SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_JS_URL to .env, then restart the C server.');
+      'Account services are unavailable right now. Please try again later.');
     main?.replaceChildren(note);
     document.body.removeAttribute('data-auth-required');
     return false;
@@ -367,16 +368,16 @@ function fillItemCard(container, item, compact = false) {
   details.addEventListener('click', () => openItemDetails(item.id));
   actions.append(details);
   if (item.is_owner && item.status === 'open') {
-    for (const [status, label] of [['claimed', 'Mark claimed'], ['closed', 'Close report']]) {
+    for (const [status, label] of [['claimed', 'Claimed & remove'], ['closed', 'Close & remove']]) {
       const button = makeElement('button', 'item-action', label); button.type = 'button';
       button.addEventListener('click', async () => {
-        if (!window.confirm(`Mark your report as ${status}?`)) return;
+        if (!window.confirm(`This permanently deletes the report, its matches, and any related handoff requests and chats. Continue and ${status === 'claimed' ? 'mark this item as claimed' : 'close this report'}?`)) return;
         button.disabled = true;
         try {
-          await apiRequest(`/api/items/${encodeURIComponent(item.id)}/status`, {
-            method: 'PATCH', auth: 'required', body: JSON.stringify({ status })
+          await apiRequest(`/api/items/${encodeURIComponent(item.id)}`, {
+            method: 'DELETE', auth: 'required'
           });
-          toast('Your report status was updated.');
+          toast('Your report and related handoff records were removed.');
           if (page === 'items') await loadBrowseItems(true);
           if (page === 'home') await loadHome();
           if (page === 'profile') await loadMyItems();
@@ -422,8 +423,8 @@ async function loadHome() {
   ]);
   if (connection && health.status === 'fulfilled') {
     connection.textContent = health.value.database === 'connected'
-      ? 'C server and PostgreSQL are connected.'
-      : 'C server is running; PostgreSQL is not configured.';
+      ? 'All services are ready.'
+      : 'Some services are temporarily unavailable.';
     connection.classList.toggle('connected', health.value.database === 'connected');
     connection.classList.toggle('disconnected', health.value.database !== 'connected');
   } else if (connection) {
@@ -459,6 +460,49 @@ async function loadBrowseItems(reset = false) {
   if (reset) browseOffset = 0;
   const requestId = ++browseRequestId;
   status.textContent = 'Loading found items…'; container.replaceChildren();
+  if (showingMatches) {
+    status.textContent = 'Finding matches for your open lost reports…';
+    const filterNote = byId('active-filter-count');
+    if (filterNote) filterNote.textContent = 'Matches across your open lost reports · browse filters paused';
+    try {
+      const payload = await apiRequest('/api/matches', { auth: 'required' });
+      if (requestId !== browseRequestId) return;
+      const matches = Array.isArray(payload.matches) ? payload.matches : [];
+      const bestByFoundId = new Map();
+      for (const match of matches) {
+        const item = match?.found_item;
+        if (!item?.id) continue;
+        const previous = bestByFoundId.get(item.id);
+        if (!previous || Number(match.score) > Number(previous.score)) bestByFoundId.set(item.id, match);
+      }
+      const rankedMatches = [...bestByFoundId.values()].sort((a, b) => Number(b.score) - Number(a.score));
+      browseTotal = rankedMatches.length;
+      status.textContent = browseTotal
+        ? `${browseTotal} potential ${browseTotal === 1 ? 'match' : 'matches'} found across your open lost reports.`
+        : 'No matches found yet. Report a lost item or check back when new found items are added.';
+      if (rankedMatches.length) {
+        rankedMatches.forEach((match) => {
+          const cardHost = makeElement('div', 'match-result');
+          cardHost.append(makeElement('p', 'match-result-note', `${match.score}% match${match.strength ? ` · ${match.strength}` : ''}`));
+          fillItemCard(cardHost, match.found_item);
+          container.append(cardHost);
+        });
+      } else renderEmpty(container, 'No potential matches are available for your open lost reports. Your reports stay saved, and new found items will appear here when they match.');
+      byId('page-count').textContent = 'Matches';
+      byId('browse-prev').disabled = true;
+      byId('browse-next').disabled = true;
+    } catch (error) {
+      if (requestId !== browseRequestId) return;
+      status.textContent = error.message;
+      renderEmpty(container, 'Matches could not be loaded. Check your connection and retry.');
+      const retry = makeElement('button', 'button secondary', 'Retry');
+      retry.type = 'button'; retry.addEventListener('click', () => loadBrowseItems(false));
+      container.append(retry);
+    }
+    return;
+  }
+  const matchesButton = byId('show-matches');
+  if (matchesButton) matchesButton.setAttribute('aria-pressed', 'false');
   const type = new URLSearchParams(window.location.search).get('type') || document.body.dataset.type || 'found';
   const mineOnly = new URLSearchParams(window.location.search).get('mine') === 'true';
   const query = new URLSearchParams();
@@ -516,11 +560,12 @@ function initBrowse() {
   const mineOnly = new URLSearchParams(window.location.search).get('mine') === 'true';
   if (['lost', 'found', 'all'].includes(initialType)) document.body.dataset.type = initialType;
   const type = document.body.dataset.type || 'found';
+  if (byId('show-matches')) byId('show-matches').hidden = type !== 'found' || mineOnly;
   if (mineOnly) {
     const mineTitle = type === 'lost' ? 'My Lost Items' : type === 'found' ? 'My Found Items' : 'My Item Reports';
     byId('browse-title').textContent = mineTitle;
     document.title = `${mineTitle} — UniLost`;
-    document.querySelector('.page-intro .lede').textContent = 'Manage the status of your reports and open item details.';
+    document.querySelector('.page-intro .lede').textContent = 'Manage your reports and open their details.';
   } else if (type === 'lost') {
     byId('browse-title').textContent = 'Lost Item Reports';
     document.title = 'Lost Item Reports — UniLost';
@@ -533,9 +578,10 @@ function initBrowse() {
   }
   for (const id of ['search-filter', 'category-filter', 'location-filter', 'status-filter', 'date-from-filter', 'date-to-filter', 'sort-filter']) {
     byId(id)?.addEventListener('input', () => {
+      if (showingMatches) return;
       window.clearTimeout(browseTimer); browseTimer = window.setTimeout(() => loadBrowseItems(true), 220);
     });
-    byId(id)?.addEventListener('change', () => loadBrowseItems(true));
+    byId(id)?.addEventListener('change', () => { if (!showingMatches) loadBrowseItems(true); });
   }
   byId('clear-filters')?.addEventListener('click', () => {
     for (const id of ['search-filter', 'category-filter', 'location-filter', 'status-filter', 'date-from-filter', 'date-to-filter']) {
@@ -545,6 +591,15 @@ function initBrowse() {
     loadBrowseItems(true);
   });
   byId('refresh-items')?.addEventListener('click', () => loadBrowseItems(false));
+  byId('show-matches')?.addEventListener('click', () => {
+    showingMatches = !showingMatches;
+    const button = byId('show-matches');
+    button.textContent = showingMatches ? 'Browse all found items' : 'Matches';
+    button.setAttribute('aria-pressed', String(showingMatches));
+    byId('browse-prev').hidden = showingMatches;
+    byId('browse-next').hidden = showingMatches;
+    loadBrowseItems(true);
+  });
   byId('browse-prev')?.addEventListener('click', () => {
     browseOffset = Math.max(0, browseOffset - PAGE_SIZE); loadBrowseItems(false);
   });
@@ -814,9 +869,9 @@ function initRegister(auth) {
       if (method === 'phone') {
         pendingPhoneNumber = phone;
         phoneVerifyForm.classList.remove('hidden');
-        showMessage(message, 'Supabase accepted the phone registration. Enter the SMS code if it arrives; the other contact stays unverified until you confirm it in Profile.');
+        showMessage(message, 'Account created. Enter the SMS code to verify your phone. You can verify your other contact from Profile.');
       } else {
-        showMessage(message, 'Supabase accepted registration. Confirm your email before signing in. The other contact stays unverified until you confirm it in Profile.');
+        showMessage(message, 'Account created. Confirm your email before signing in. You can verify your other contact from Profile.');
       }
     }
   });
@@ -825,7 +880,7 @@ function initRegister(auth) {
     const token = phoneVerifyForm.elements.token.value.trim();
     const { data, error } = await auth.auth.verifyOtp({ phone: pendingPhoneNumber, token, type: 'sms' });
     if (error) { showMessage(message, error.message, true); return; }
-    if (!data.session) { showMessage(message, 'Supabase did not create a verified session. Try signing in after confirming the number.', true); return; }
+    if (!data.session) { showMessage(message, 'Phone verification is incomplete. Confirm the number, then try signing in.', true); return; }
     showMessage(message, 'Phone verified. Your account is ready.');
     window.location.assign(safeNextPath());
   });
@@ -843,14 +898,14 @@ function initForgot(auth) {
         redirectTo: `${window.location.origin}/reset-password.html`
       });
       if (error) showMessage(message, error.message, true);
-      else showMessage(message, 'If an account matches that email, Supabase will send recovery instructions. Check your inbox and spam folder.');
+      else showMessage(message, 'If an account matches that email, recovery instructions will arrive shortly. Check your inbox and spam folder.');
       return;
     }
     pendingPhoneNumber = normalizePhone(identifier);
     if (!pendingPhoneNumber) { showMessage(message, 'Enter a valid email or phone in international format, such as +91 98765 43210.', true); return; }
     const { error } = await auth.auth.signInWithOtp({ phone: pendingPhoneNumber, options: { shouldCreateUser: false } });
     if (error) { showMessage(message, error.message, true); return; }
-    showMessage(message, 'Supabase accepted the SMS request. Enter the code if it arrives.');
+    showMessage(message, 'A recovery code was requested. Enter it when it arrives.');
     phoneForm.classList.remove('hidden'); phoneForm.dataset.phone = pendingPhoneNumber;
   });
   phoneForm?.addEventListener('submit', async (event) => {
@@ -858,7 +913,7 @@ function initForgot(auth) {
     const token = phoneForm.elements.token.value.trim();
     const { data, error } = await auth.auth.verifyOtp({ phone: phoneForm.dataset.phone || pendingPhoneNumber, token, type: 'sms' });
     if (error) { showMessage(message, error.message, true); return; }
-    if (!data.session) { showMessage(message, 'Supabase did not create a verified session. Try again or use email recovery.', true); return; }
+    if (!data.session) { showMessage(message, 'Phone verification is incomplete. Try again or use email recovery.', true); return; }
     sessionStorage.setItem('unilost-password-recovery', 'true');
     window.location.assign('/reset-password.html');
   });
@@ -871,7 +926,7 @@ function initReset(auth, session) {
   if (session && (fromRecoveryLink || fromPhoneOtp)) {
     form.classList.remove('hidden'); byId('reset-intro').textContent = 'Set a new password for the account that completed recovery.';
   } else {
-    byId('reset-intro').textContent = 'This page needs a valid Supabase recovery link or verified phone recovery session. Request a new link or code if this one expired.';
+    byId('reset-intro').textContent = 'Open this page from a valid recovery link or phone verification. Request a new link or code if this one expired.';
   }
   form.addEventListener('submit', async (event) => {
     event.preventDefault(); const message = byId('form-message');
@@ -1119,12 +1174,12 @@ async function initProfile() {
     byId('account-created').textContent = profile.created_at
       ? `Account created ${formatDate(profile.created_at)}` : '';
     if (profile.email && !profile.email_confirmed) {
-      showMessage(byId('email-message'), 'This email is awaiting Supabase confirmation.');
+      showMessage(byId('email-message'), 'This email is awaiting confirmation.');
     } else if (profile.contact_email && !profile.email) {
       showMessage(byId('email-message'), 'This contact email is unverified. Request confirmation before using it to sign in.');
     }
     if (profile.phone && !profile.phone_confirmed) {
-      showMessage(byId('phone-message'), 'This phone is awaiting Supabase verification.');
+      showMessage(byId('phone-message'), 'This phone is awaiting verification.');
     }
   } catch (error) {
     showMessage(byId('profile-message'), error.message, true);
@@ -1178,7 +1233,7 @@ async function initProfile() {
     }
     const { error } = await auth.auth.updateUser({ email: input.value.trim() });
     if (error) showMessage(message, error.message, true);
-    else showMessage(message, 'Supabase accepted the email change. Follow its confirmation link; your email changes only after verification.');
+    else showMessage(message, 'Check your email for a confirmation link. Your email will change after you verify it.');
   });
 
   byId('request-phone-verification')?.addEventListener('click', async () => {
@@ -1195,7 +1250,7 @@ async function initProfile() {
     if (error) { showMessage(message, error.message, true); return; }
     pendingPhoneNumber = phone;
     byId('phone-change-form').classList.remove('hidden');
-    showMessage(message, 'Supabase accepted the phone change. Enter the code if it arrives.');
+    showMessage(message, 'A verification code was requested. Enter it when it arrives.');
   });
 
   byId('phone-change-form')?.addEventListener('submit', async (event) => {
@@ -1205,7 +1260,7 @@ async function initProfile() {
       phone: pendingPhoneNumber, token: form.elements.token.value.trim(), type: 'phone_change'
     });
     if (error) { showMessage(byId('phone-message'), error.message, true); return; }
-    showMessage(byId('phone-message'), 'Phone verified through Supabase Auth.');
+    showMessage(byId('phone-message'), 'Phone number verified.');
     byId('phone-change-form').classList.add('hidden');
     pendingPhoneNumber = '';
   });
@@ -1249,14 +1304,14 @@ async function initProfile() {
     }
     const { error } = await auth.auth.updateUser({ password });
     if (error) showMessage(message, error.message, true);
-    else { form.reset(); showMessage(message, 'Password updated through Supabase Auth.'); }
+    else { form.reset(); showMessage(message, 'Password updated.'); }
   });
   byId('profile-logout')?.addEventListener('click', () => logoutUser(false));
 }
 
 async function initialize() {
   renderFooter();
-  let auth = null, session = null, authReady = false, authInitFailed = false;
+  let auth = null, session = null, authReady = false;
   try {
     auth = await initAuth(); authReady = Boolean(auth);
     if (auth) {
@@ -1270,7 +1325,6 @@ async function initialize() {
       session = await getSession();
     }
   } catch {
-    authInitFailed = true;
     auth = null;
     session = null;
     authReady = false;
@@ -1281,9 +1335,7 @@ async function initialize() {
     const notice = byId('auth-setup-notice');
     const detail = byId('auth-setup-detail');
     if (notice && detail) {
-      detail.textContent = authInitFailed
-        ? 'UniLost could not initialize sign-in. Check the C server, Supabase settings, and network connection, then reload.'
-        : 'Add SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_JS_URL to your local .env file, then restart the C server.';
+      detail.textContent = 'Account services are unavailable right now. Please try again later.';
       notice.hidden = false;
     }
     document.querySelectorAll('form button[type=submit]').forEach((button) => { button.disabled = true; });
